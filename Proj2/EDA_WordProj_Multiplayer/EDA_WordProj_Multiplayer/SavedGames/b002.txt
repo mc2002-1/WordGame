@@ -1,0 +1,30 @@
+BOARD SIZE : 13 x 13
+
+BOARD : 
+
+  a b c d e f g h i j k l m 
+A . . . . . . . . . . . . . 
+B . . . . . . . . . . . . . 
+C . . . . C . . . . . . . . 
+D C O R T E X . . . . . . . 
+E E . . . R . . . . . . . . 
+F R . . . E . . S . . . . . 
+G E . . . B R A I N . . . . 
+H B . . . E . . N . . . . . 
+I R . . . L U N G . . . . . 
+J U . . . L . . . . . . . . 
+K M . . . U . . . . . . . . 
+L . . . . M . . . . . . . . 
+M . . . . . . . . . . . . . 
+
+
+
+
+Position: 	Word:
+---------------------
+GeH		BRAIN
+CeV		CEREBELLUM
+DaH		CORTEX
+IeH		LUNG
+DaV		CEREBRUM
+FhV		SING

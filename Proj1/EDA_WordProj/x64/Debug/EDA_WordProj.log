@@ -1,0 +1,4 @@
+﻿  Origem.cpp
+C:\Users\migue\OneDrive\Ambiente de Trabalho\MESTRADO\EDA\EDA_WordProj\Proj1\EDA_WordProj\Origem.cpp(461,15): warning C4267: 'inicializando': conversão de 'size_t' para 'int', possível perda de dados
+C:\Users\migue\OneDrive\Ambiente de Trabalho\MESTRADO\EDA\EDA_WordProj\Proj1\EDA_WordProj\Origem.cpp(605,20): warning C4267: 'inicializando': conversão de 'size_t' para 'unsigned int', possível perda de dados
+  EDA_WordProj.vcxproj -> C:\Users\migue\OneDrive\Ambiente de Trabalho\MESTRADO\EDA\EDA_WordProj\Proj1\x64\Debug\EDA_WordProj.exe

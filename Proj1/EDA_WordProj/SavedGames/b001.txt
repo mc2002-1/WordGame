@@ -1,0 +1,33 @@
+
+  a b c d e f g h i j k l m n o 
+A . . . . . . . . . . . . . . . 
+B . . . . . . . . . . . N . . . 
+C . . . T . . . M . E . U . . . 
+D . C R A Z Y . A . X . A . . . 
+E . . . T . E . G . P . N . . . 
+F . I N T E L L I G E N C E . . 
+G . . . O . L . C . R . E . . . 
+H . . . O . O . I . I . . . . . 
+I . . . . . W H A L E . . . . . 
+J . . . . . . . N . N . . . . . 
+K . . . . . . . . . C . . . . . 
+L . . . . . C O F F E E . . . . 
+M . . . . . A . . . . . . . . . 
+N . . . . . R . . . . . . . . . 
+O . . . . . . . . . . . . . . . 
+
+
+
+
+Position: 	Word:
+---------------------
+FbH		INTELLIGENCE
+CdV		TATTOO
+BlV		NUANCE
+CjV		EXPERIENCE
+DbH		CRAZY
+DfV		YELLOW
+IfH		WHALE
+ChV		MAGICIAN
+LfH		COFFEE
+LfV		CAR

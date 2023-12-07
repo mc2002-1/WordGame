@@ -1,0 +1,28 @@
+BOARD SIZE : 10 x 10
+
+BOARD : 
+
+  a b c d e f g h i j 
+A . . . . . . . . . . 
+B . . S . . . . . . . 
+C . N U M B . . . . . 
+D . . I . . . . . B . 
+E . . T E X T U R E . 
+F . . . . . . T . D . 
+G C H A R A C T E R . 
+H . O . . . . E . O . 
+I . W . . . . R . O . 
+J . . . . . . . . M . 
+
+
+
+
+Position: 	Word:
+---------------------
+CbH		NUMB
+BcV		SUIT
+GaH		CHARACTER
+DiV		BEDROOM
+EcH		TEXTURE
+EgV		UTTER
+GbV		HOW

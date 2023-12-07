@@ -1,0 +1,4 @@
+﻿  Origem.cpp
+C:\Users\migue\OneDrive\Ambiente de Trabalho\MESTRADO\EDA\EDA_WordProj\Proj2\EDA_WordProj_Multiplayer\EDA_WordProj_Multiplayer\Origem.cpp(227,29): warning C4267: '=': conversão de 'size_t' para 'int', possível perda de dados
+C:\Users\migue\OneDrive\Ambiente de Trabalho\MESTRADO\EDA\EDA_WordProj\Proj2\EDA_WordProj_Multiplayer\EDA_WordProj_Multiplayer\Origem.cpp(228,29): warning C4267: '=': conversão de 'size_t' para 'int', possível perda de dados
+  EDA_WordProj_Multiplayer.vcxproj -> C:\Users\migue\OneDrive\Ambiente de Trabalho\MESTRADO\EDA\EDA_WordProj\Proj2\EDA_WordProj_Multiplayer\x64\Debug\EDA_WordProj_Multiplayer.exe
