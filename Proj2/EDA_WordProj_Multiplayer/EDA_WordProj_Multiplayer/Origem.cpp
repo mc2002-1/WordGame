@@ -2,8 +2,13 @@
 #include <vector>
 #include <fstream>
 #include <string>  
+#include <cctype>
+#include <cstdlib>  // For system() function
+#include <limits>
+#include <windows.h>
 #include <filesystem>
-#include <algorithm>
+#include <algorithm>  
+#include <random> 
 
 //--------------------------------------------------------------------------------
 using namespace std;
@@ -85,9 +90,13 @@ int read_nPlayers()
 		cin >> n_players;
 
 		if (n_players >= min_n_players && n_players <= max_n_players)
-		{ valid_n_players = true; }
+		{
+			valid_n_players = true;
+		}
 		else
-		{ cout << "Error: Number of players is invalid!" << endl; }
+		{
+			cout << "Error: Number of players is invalid!" << endl;
+		}
 
 	} while (!valid_n_players); // The loop will run until a valid number of players is inserted
 
@@ -223,7 +232,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					if (x_pos != string::npos) /*string::npos is used to represent "no position". If x_pos is not equal to string::npos, it means that the substring "x" was found in the string.*/
 					{
 						numLin = stoi(posStr.substr(0, x_pos)); /*First argument of substr : start position | Second argument : Length of the string evaluated*/
-						numCol = stoi(posStr.substr(x_pos + 1)); /*If no second argument is given, the substr will start from the positivion given on the argument to the end of the string*/	
+						numCol = stoi(posStr.substr(x_pos + 1)); /*If no second argument is given, the substr will start from the positivion given on the argument to the end of the string*/
 						boardStruct.numLins = numLin;
 						boardStruct.numCols = numCol;
 						boardStruct.boardCells = vector<vector<char>>(numLin, vector<char>(numCol, '.')); /*Initializing the board cells*/
@@ -239,7 +248,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					auto it = remove_if(fileLine.begin(), fileLine.end(), ::isspace);
 					fileLine.erase(it, fileLine.end()); /*Removing the spaces between the word and its corresponding position*/
 
-					wordsOnBoard.word = fileLine.substr(3); 
+					wordsOnBoard.word = fileLine.substr(3);
 
 					// Position Information:
 					wordPos.lin = fileLine[0]; wordPos.col = fileLine[1]; wordPos.dir = fileLine[2];
@@ -303,6 +312,57 @@ void Board::showBoard(const BoardStruct& b)
 }
 
 
+
+class Bag {
+
+public:
+
+	Bag() {
+		vector <char> bagOfLetters = bag(board);
+
+	}
+
+	remove(int numLetters);
+
+};
+
+vector <char> Bag::bag(Board& board) {
+
+
+	vector <char> boardLetters;
+
+	for (size_t i = 0; i < board.numLins; i++) {
+		for (size_t j = 0; j < board.numCols; j++) {
+			if (board.boardCells[i][j] != '.') {
+				boardLetters.push_back(board.boardCells[i][j]);
+			}
+		}
+	}
+
+	random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(boardLetters.begin(), boardLetters.end(), g);
+
+	return boardLetters;
+
+}
+
+string remove(int numLetters) {
+	string removed;
+	for (size_t f = 0; f < numLetters; f++) {
+		int random = rand() % (bagOfLetters.size() - 1);
+		removed += bagOfLetters[random];
+		vector <char> bagOfLetters1 = bagOfLetters;
+		for (size_t i = random; i < bagOfLetters.size(); i++) {
+			bagOfLetters[i] = bagOfLetters1[i + 1];
+		}
+	}
+	
+	return removed;
+}
+
+
+
 int main()
 {
 	cout << "============== Multiplayer Board Game ==============" << endl;
@@ -317,3 +377,5 @@ int main()
 	return 0;
 
 }
+
+
