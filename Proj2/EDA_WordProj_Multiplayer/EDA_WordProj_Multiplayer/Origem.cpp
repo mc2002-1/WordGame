@@ -53,6 +53,7 @@ typedef struct
 {
 	char lin;
 	char col;
+	char dir;
 }CharsPosition;
 
 typedef struct
@@ -61,11 +62,18 @@ typedef struct
 	string word;
 } WordsOnBoard;
 
+typedef struct
+{
+	vector<CharsPosition> pos;
+	vector<char> charWord;
+} CharsOnBoard;
+
 typedef struct {
 	vector<vector<char>> boardCells;
-	int numLins;
-	int numCols;
+	size_t numLins;
+	size_t numCols;
 	vector<WordsOnBoard> wordsOnBoard;
+	vector<CharsOnBoard> charsOnBoard;
 }BoardStruct;
 
 
@@ -98,16 +106,17 @@ int read_nPlayers()
 
 class Board {
 private:
-	pair<string, vector<string>> getTxtFilesInFolder();
 	pair<string, vector<string>> folder_file;
 	string folder;
 	vector<string> txtFiles;
 	BoardStruct boardStruct;
-
+	
+	pair<string, vector<string>> getTxtFilesInFolder();
 	BoardStruct readBoardFile(const string& folder, const vector<string>& txtFiles);
 
 public:
-	Board() {
+	Board() 
+	{
 		// Initializing members in the constructor
 		folder_file = getTxtFilesInFolder();
 		folder = folder_file.first;
@@ -119,10 +128,40 @@ public:
 	void showBoard(const BoardStruct& b);
 };
 
+class Bag
+{
+private:
+	void constructBag(BoardStruct& boardStruct);
 
+public:
+	Bag(BoardStruct& boardStruct)
+	{
+		constructBag(boardStruct);
+	}
+};
 
-// ===================================== Class functions =====================================
+class Player
+{
+public:
+	int id_player;
+	string name;
+	int id;
+	pair<int, string> player_info;
 
+	Player() // Construct
+	{	
+		player_info = create_player(id, name);
+		id = player_info.first;
+		name = player_info.second;
+	}
+
+	pair<int, string> create_player(int id, string name)
+	{
+		
+	}
+};
+
+// ===================================== Board Class functions =====================================
 // Lists the files on the folder with the saved games
 pair <string, vector<string>> Board::getTxtFilesInFolder() {
 
@@ -155,7 +194,8 @@ pair <string, vector<string>> Board::getTxtFilesInFolder() {
 
 // Reads the file chosen by the users and retrieves the saved game board information to reconstruct the board 
 BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txtFiles)
-// Although the function is big, it was meant this way in order to only loop through the tex file once to retrieve everything
+// Although the function is big and with a lot of identationa, it was meant this way in order to only loop through the tex
+// file once to retrieve all the information regarding both the board and board characters, provinding an efficient code
 {
 	bool validFile = false;
 	BoardStruct boardStruct;
@@ -223,7 +263,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					if (x_pos != string::npos) /*string::npos is used to represent "no position". If x_pos is not equal to string::npos, it means that the substring "x" was found in the string.*/
 					{
 						numLin = stoi(posStr.substr(0, x_pos)); /*First argument of substr : start position | Second argument : Length of the string evaluated*/
-						numCol = stoi(posStr.substr(x_pos + 1)); /*If no second argument is given, the substr will start from the positivion given on the argument to the end of the string*/	
+						numCol = stoi(posStr.substr(x_pos + 1)); /*If no second argument is given, the substr will start from the positivion given on the argument to the end of the string*/
 						boardStruct.numLins = numLin;
 						boardStruct.numCols = numCol;
 						boardStruct.boardCells = vector<vector<char>>(numLin, vector<char>(numCol, '.')); /*Initializing the board cells*/
@@ -239,7 +279,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					auto it = remove_if(fileLine.begin(), fileLine.end(), ::isspace);
 					fileLine.erase(it, fileLine.end()); /*Removing the spaces between the word and its corresponding position*/
 
-					wordsOnBoard.word = fileLine.substr(3); 
+					wordsOnBoard.word = fileLine.substr(3);
 
 					// Position Information:
 					wordPos.lin = fileLine[0]; wordPos.col = fileLine[1]; wordPos.dir = fileLine[2];
@@ -287,14 +327,14 @@ void Board::showBoard(const BoardStruct& b)
 	cout << "\n ------ Board Game ------ " << endl;
 
 	cout << endl;
-	cout << RED << " ";
+	cout << BLUE << "  ";
 	for (size_t j = 0; j < b.boardCells.at(0).size(); j++)
 		cout << (char)('a' + j) << ' ';
 	cout << endl;
 	cout << NO_COLOR;
 	for (size_t i = 0; i < b.boardCells.size(); i++)
 	{
-		cout << RED << (char)('A' + i) << ' ' << NO_COLOR;
+		cout << BLUE << (char)('A' + i) << ' ' << NO_COLOR;
 		for (size_t j = 0; j < b.boardCells.at(i).size(); j++)
 			cout << b.boardCells.at(i).at(j) << ' ';
 		cout << endl;
@@ -302,18 +342,116 @@ void Board::showBoard(const BoardStruct& b)
 	cout << endl;
 }
 
+// ===================================== Bag Class functions =====================================
+
+void Bag::constructBag(BoardStruct& boardStruct)
+{
+	// Word characters and corresponding position variables
+	CharsOnBoard charsOnBoard;
+	CharsPosition charsPosition;
+
+	for(const WordsOnBoard& words : boardStruct.wordsOnBoard)
+	{
+		// Word characters and corresponding position variables
+		CharsOnBoard charsOnBoard;
+		CharsPosition charsPosition;
+
+		size_t wordSize = words.word.size();
+
+		charsOnBoard.charWord.reserve(wordSize); /* Reserve pre - allocates memory to the vector improving the efficiency of the code */
+		charsOnBoard.pos.reserve(wordSize);
+
+		// Decomposing the board words into eah character and its position
+		switch (words.pos.dir)
+		{
+		case 'H': // Horizontal direction
+			for (int c = 0; c < wordSize; c++)
+			{
+				// Retrieve each character information from each word on the board
+				charsOnBoard.charWord.push_back(words.word[c]); // Character
+				charsPosition.lin = words.pos.lin; // Character line
+				charsPosition.col = words.pos.col + c; // Character column
+
+				// Checks whether the character is specific to a word or belongs to two words. If so, the + char references that in the char position
+				if (words.pos.lin - 'A' > 0 && words.pos.lin - 'A' < boardStruct.numLins &&
+					(boardStruct.boardCells[charsPosition.lin - 'A' - 1][charsPosition.col - 'a'] == '.' ||
+						boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.'))
+				{
+					charsPosition.dir = 'H';
+				}
+				else
+				{
+					charsPosition.dir = '+';
+				}
+				charsOnBoard.pos.push_back(charsPosition);
+			}
+			break;
+
+		case 'V': // Vertical direction
+			for (int c = 0; c < wordSize; c++)
+			{
+				// Reconstruct board cells for each word
+				boardStruct.boardCells[words.pos.lin - 'A' + c][words.pos.col - 'a'] = words.word[c];
+
+				// Retrieve each character information from each word on the board
+				charsOnBoard.charWord.push_back(words.word[c]); // Character
+				charsPosition.lin = words.pos.lin + c; // Character line
+				charsPosition.col = words.pos.col; // Character column
+
+				// Checks whether the character is specific to a word or belongs to two words. If so, the + char references that in the char position
+				if (words.pos.col - 'a' > 0 && words.pos.col - 'a' < boardStruct.numCols &&
+					(boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' - 1] == '.' ||
+						boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' + 1] == '.'))
+				{
+					charsPosition.dir = 'V';
+				}
+				else
+				{
+					charsPosition.dir = '+';
+				}
+				charsOnBoard.pos.push_back(charsPosition);
+			}
+			break;
+		}
+		boardStruct.charsOnBoard.push_back(charsOnBoard);
+	}
+}
 
 int main()
 {
 	cout << "============== Multiplayer Board Game ==============" << endl;
 
-	int nPlayers = read_nPlayers();
+	int nPlayers = 2;
+	nPlayers = read_nPlayers();
 
 	Board board;
+
+	/*
+	Player player;
+	Player game_players[4];
+	
+	string name;
+	for (int i = 0; i < nPlayers; i++)
+	{
+		cout << "Player " << i+1 << " name: " << endl;
+		cin >> name;
+		game_players[i] = player.create_player(i, name);
+	}
+	 */
 
 	BoardStruct& boardStruct = board.getBoardStruct();
 	board.showBoard(boardStruct);
 
-	return 0;
+	Bag bag(boardStruct);
 
+	for (const CharsOnBoard& word : boardStruct.charsOnBoard)
+	{
+		cout << "-----------------" << endl;
+		for (int i = 0; i < word.charWord.size(); i++)
+		{		
+			cout << word.charWord[i] << "  " << word.pos[i].lin << word.pos[i].col << word.pos[i].dir << endl;
+		}	
+	}
+	return 0;
 }
+
