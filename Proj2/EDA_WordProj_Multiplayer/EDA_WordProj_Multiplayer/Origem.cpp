@@ -2,8 +2,14 @@
 #include <vector>
 #include <fstream>
 #include <string>  
+#include <cctype>
+#include <cstdlib>  // For system() function
+#include <limits>
+#include <windows.h>
 #include <filesystem>
-#include <algorithm>
+#include <algorithm>  
+#include <random> 
+
 
 //--------------------------------------------------------------------------------
 using namespace std;
@@ -76,6 +82,15 @@ typedef struct {
 	vector<CharsOnBoard> charsOnBoard;
 }BoardStruct;
 
+typedef struct {
+	char letter;
+	CharsPosition pos;
+} SingleChar;
+
+typedef struct {
+	vector<SingleChar> letters;
+} BagOfLetters;
+
 
 // ===================================== Functions =====================================
 
@@ -128,16 +143,22 @@ public:
 	void showBoard(const BoardStruct& b);
 };
 
-class Bag
-{
+class Bag {
 private:
-	void constructBag(BoardStruct& boardStruct);
+	BagOfLetters constructBag(BoardStruct& boardStruct);
+	void shuffle(BagOfLetters& ActualBag); 
+	BagOfLetters ActualBag;
 
 public:
-	Bag(BoardStruct& boardStruct)
-	{
-		constructBag(boardStruct);
+	Bag(BoardStruct& boardStruct) {
+		ActualBag = constructBag(boardStruct);
+		shuffle(ActualBag);
 	}
+	const BagOfLetters& getActualBag() const {
+		return ActualBag;
+	}
+	bool isEmpty(const BagOfLetters& ActualBag);
+	//void insert(BoardStruct& boardStruct, );
 };
 
 class Player
@@ -344,24 +365,24 @@ void Board::showBoard(const BoardStruct& b)
 
 // ===================================== Bag Class functions =====================================
 
-void Bag::constructBag(BoardStruct& boardStruct)
+BagOfLetters Bag::constructBag(BoardStruct& boardStruct)
 {
-	// Word characters and corresponding position variables
-	CharsOnBoard charsOnBoard;
-	CharsPosition charsPosition;
+
 
 	for(const WordsOnBoard& words : boardStruct.wordsOnBoard)
 	{
 		// Word characters and corresponding position variables
 		CharsOnBoard charsOnBoard;
 		CharsPosition charsPosition;
+		BagOfLetters ActualBag;
 
 		size_t wordSize = words.word.size();
 
 		charsOnBoard.charWord.reserve(wordSize); /* Reserve pre - allocates memory to the vector improving the efficiency of the code */
 		charsOnBoard.pos.reserve(wordSize);
+		ActualBag.letters.reserve(wordSize);
 
-		// Decomposing the board words into eah character and its position
+		// Decomposing the board words into each character and its position
 		switch (words.pos.dir)
 		{
 		case 'H': // Horizontal direction
@@ -414,15 +435,45 @@ void Bag::constructBag(BoardStruct& boardStruct)
 			break;
 		}
 		boardStruct.charsOnBoard.push_back(charsOnBoard);
+		
 	}
+	for (const CharsOnBoard& word : boardStruct.charsOnBoard)
+	{
+		for (size_t i = 0; i < word.charWord.size(); ++i)
+		{
+			SingleChar singleChar;
+			singleChar.letter = word.charWord[i];
+			singleChar.pos = word.pos[i];
+
+			ActualBag.letters.push_back(singleChar);
+		}
+	}
+	return ActualBag;
+}
+
+void Bag::shuffle(BagOfLetters& ActualBag) {
+	
+	random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(ActualBag.letters.begin(), ActualBag.letters.end(), g);
+
+}
+
+bool Bag::isEmpty(const BagOfLetters& ActualBag) {
+	
+	bool empty = false;
+	if (ActualBag.letters.empty() == true) {
+		empty = true;
+	}
+
+	return empty;
 }
 
 int main()
 {
 	cout << "============== Multiplayer Board Game ==============" << endl;
 
-	int nPlayers = 2;
-	nPlayers = read_nPlayers();
+	int nPlayers = read_nPlayers();
 
 	Board board;
 
@@ -443,6 +494,8 @@ int main()
 	board.showBoard(boardStruct);
 
 	Bag bag(boardStruct);
+	const BagOfLetters& actualBag = bag.getActualBag();
+	
 
 	for (const CharsOnBoard& word : boardStruct.charsOnBoard)
 	{
@@ -452,6 +505,7 @@ int main()
 			cout << word.charWord[i] << "  " << word.pos[i].lin << word.pos[i].col << word.pos[i].dir << endl;
 		}	
 	}
+	
 	return 0;
-}
 
+}
