@@ -2,8 +2,14 @@
 #include <vector>
 #include <fstream>
 #include <string>  
+#include <cctype>
+#include <cstdlib>  // For system() function
+#include <limits>
+#include <windows.h>
 #include <filesystem>
-#include <algorithm>
+#include <algorithm>  
+#include <random> 
+#include <set>
 
 //--------------------------------------------------------------------------------
 using namespace std;
@@ -49,12 +55,27 @@ typedef struct
 	char dir;
 } WordPosition;
 
-typedef struct
+struct CharsPosition
 {
 	char lin;
 	char col;
 	char dir;
-}CharsPosition;
+
+	// Operator overloading for the find function to work with the custom structure. 
+	// Also, this does not work with typedef struc syntax from C, only with the newer C++ syntax
+	bool operator==(const CharsPosition& other) const
+	{
+		if(lin == other.lin && col == other.col) // The line and column are enough for the comparison
+		{
+			return true;
+			
+		}
+		else
+		{
+			return false;
+		}
+	}
+};
 
 typedef struct
 {
@@ -66,6 +87,7 @@ typedef struct
 {
 	vector<CharsPosition> pos;
 	vector<char> charWord;
+	size_t nLetters;
 } CharsOnBoard;
 
 typedef struct {
@@ -73,11 +95,19 @@ typedef struct {
 	size_t numLins;
 	size_t numCols;
 	vector<WordsOnBoard> wordsOnBoard;
-	vector<CharsOnBoard> charsOnBoard;
 }BoardStruct;
 
+typedef struct {
+	char letter;
+	CharsPosition pos;
+} SingleChar;
 
-// ===================================== Functions =====================================
+typedef struct {
+	vector<SingleChar> letters;
+} BagOfLetters;
+
+
+// ===================================== Non-class functions =====================================
 
 int read_nPlayers()
 {
@@ -128,16 +158,26 @@ public:
 	void showBoard(const BoardStruct& b);
 };
 
-class Bag
-{
+class Bag {
 private:
-	void constructBag(BoardStruct& boardStruct);
+	CharsOnBoard constructBag(BoardStruct& boardStruct, const int& nPlayers);
+	void shuffle(BagOfLetters& ActualBag);
+	BagOfLetters ActualBag;
+	CharsOnBoard bag;
 
 public:
-	Bag(BoardStruct& boardStruct)
+	Bag(BoardStruct& boardStruct, const int& nPlayers) 
 	{
-		constructBag(boardStruct);
+		// Initializing members in the constructor
+		bag = constructBag(boardStruct, nPlayers);
+		shuffle(ActualBag);
 	}
+	const CharsOnBoard& getActualBag() const {
+		return bag;
+	}
+	bool isEmpty(const BagOfLetters& ActualBag);
+	void insert(vector<SingleChar> h);
+	BagOfLetters remove(int n);
 };
 
 class Player
@@ -162,6 +202,7 @@ public:
 };
 
 // ===================================== Board Class functions =====================================
+
 // Lists the files on the folder with the saved games
 pair <string, vector<string>> Board::getTxtFilesInFolder() {
 
@@ -240,7 +281,6 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 				cout << "Error reading file." << endl;
 			}
 
-
 			// Board size variables
 			size_t numCol;
 			size_t numLin;
@@ -274,12 +314,12 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 				// Retrieve the words on the Board with their corresponding positions and populates its cells:
 				if (beginWordRead)
 				{
-
 					// Words on the board:
 					auto it = remove_if(fileLine.begin(), fileLine.end(), ::isspace);
 					fileLine.erase(it, fileLine.end()); /*Removing the spaces between the word and its corresponding position*/
 
 					wordsOnBoard.word = fileLine.substr(3);
+					size_t wordSize = wordsOnBoard.word.size();
 
 					// Position Information:
 					wordPos.lin = fileLine[0]; wordPos.col = fileLine[1]; wordPos.dir = fileLine[2];
@@ -290,13 +330,13 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					switch (wordPos.dir)
 					{
 					case 'H':
-						for (int c = 0; c < wordsOnBoard.word.size(); c++)
+						for (int c = 0; c < wordSize; c++)
 						{
 							boardStruct.boardCells[wordPos.lin - 'A'][wordPos.col - 'a' + c] = wordsOnBoard.word[c];
 						}
 						break;
 					case 'V':
-						for (int c = 0; c < wordsOnBoard.word.size(); c++)
+						for (int c = 0; c < wordSize; c++)
 						{
 							boardStruct.boardCells[wordPos.lin - 'A' + c][wordPos.col - 'a'] = wordsOnBoard.word[c];
 						}
@@ -344,38 +384,43 @@ void Board::showBoard(const BoardStruct& b)
 
 // ===================================== Bag Class functions =====================================
 
-void Bag::constructBag(BoardStruct& boardStruct)
+CharsOnBoard Bag::constructBag(BoardStruct& boardStruct, const int& nPlayers)
 {
 	// Word characters and corresponding position variables
 	CharsOnBoard charsOnBoard;
 	CharsPosition charsPosition;
-
-	for(const WordsOnBoard& words : boardStruct.wordsOnBoard)
+	
+	for (const WordsOnBoard& words : boardStruct.wordsOnBoard)
 	{
-		// Word characters and corresponding position variables
-		CharsOnBoard charsOnBoard;
-		CharsPosition charsPosition;
-
 		size_t wordSize = words.word.size();
 
 		charsOnBoard.charWord.reserve(wordSize); /* Reserve pre - allocates memory to the vector improving the efficiency of the code */
 		charsOnBoard.pos.reserve(wordSize);
-
-		// Decomposing the board words into eah character and its position
+	
+		// Decomposing the board words into each character and its position
 		switch (words.pos.dir)
 		{
 		case 'H': // Horizontal direction
 			for (int c = 0; c < wordSize; c++)
 			{
 				// Retrieve each character information from each word on the board
-				charsOnBoard.charWord.push_back(words.word[c]); // Character
 				charsPosition.lin = words.pos.lin; // Character line
 				charsPosition.col = words.pos.col + c; // Character column
 
 				// Checks whether the character is specific to a word or belongs to two words. If so, the + char references that in the char position
 				if (words.pos.lin - 'A' > 0 && words.pos.lin - 'A' < boardStruct.numLins &&
-					(boardStruct.boardCells[charsPosition.lin - 'A' - 1][charsPosition.col - 'a'] == '.' ||
-						boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.'))
+				   (boardStruct.boardCells[charsPosition.lin - 'A' - 1][charsPosition.col - 'a'] == '.' ||
+					boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.'))
+				{
+					charsPosition.dir = 'H';
+				}
+				else if(words.pos.lin - 'A' == 0 && 
+					 boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.')
+				{
+					charsPosition.dir = 'H';
+				}
+				else if (words.pos.lin - 'A' == boardStruct.numLins - 1 &&
+					boardStruct.boardCells[charsPosition.lin - 'A' - 1][charsPosition.col - 'a'] == '.')
 				{
 					charsPosition.dir = 'H';
 				}
@@ -383,7 +428,13 @@ void Bag::constructBag(BoardStruct& boardStruct)
 				{
 					charsPosition.dir = '+';
 				}
-				charsOnBoard.pos.push_back(charsPosition);
+
+				auto it = find(charsOnBoard.pos.begin(), charsOnBoard.pos.end(), charsPosition);
+				if (it == charsOnBoard.pos.end())
+				{
+					charsOnBoard.charWord.push_back(words.word[c]); // Character
+					charsOnBoard.pos.push_back(charsPosition); // Position
+				}		
 			}
 			break;
 
@@ -394,14 +445,23 @@ void Bag::constructBag(BoardStruct& boardStruct)
 				boardStruct.boardCells[words.pos.lin - 'A' + c][words.pos.col - 'a'] = words.word[c];
 
 				// Retrieve each character information from each word on the board
-				charsOnBoard.charWord.push_back(words.word[c]); // Character
 				charsPosition.lin = words.pos.lin + c; // Character line
 				charsPosition.col = words.pos.col; // Character column
 
 				// Checks whether the character is specific to a word or belongs to two words. If so, the + char references that in the char position
 				if (words.pos.col - 'a' > 0 && words.pos.col - 'a' < boardStruct.numCols &&
-					(boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' - 1] == '.' ||
-						boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' + 1] == '.'))
+				   (boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' - 1] == '.' ||
+				    boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' + 1] == '.'))
+				{
+					charsPosition.dir = 'V';
+				}
+				else if (words.pos.col - 'a' == 0 &&
+					boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' + 1] == '.')
+				{
+					charsPosition.dir = 'V';
+				}
+				else if (words.pos.col - 'a' == boardStruct.numCols &&
+					boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' - 1] == '.')
 				{
 					charsPosition.dir = 'V';
 				}
@@ -409,12 +469,63 @@ void Bag::constructBag(BoardStruct& boardStruct)
 				{
 					charsPosition.dir = '+';
 				}
-				charsOnBoard.pos.push_back(charsPosition);
+
+				auto it = find(charsOnBoard.pos.begin(), charsOnBoard.pos.end(), charsPosition);
+				if (it == charsOnBoard.pos.end())
+				{
+					charsOnBoard.charWord.push_back(words.word[c]); // Character
+					charsOnBoard.pos.push_back(charsPosition); // Position
+				}
 			}
 			break;
 		}
-		boardStruct.charsOnBoard.push_back(charsOnBoard);
 	}
+	charsOnBoard.nLetters = charsOnBoard.charWord.size();
+	return charsOnBoard;
+}
+
+void Bag::shuffle(BagOfLetters& ActualBag) {    //shuffling using the Fisher-Yates shuffle algorithm
+
+	random_device rd;
+	std::mt19937 g(rd());
+	std::shuffle(ActualBag.letters.begin(), ActualBag.letters.end(), g);
+
+}
+
+bool Bag::isEmpty(const BagOfLetters& ActualBag) { //to check if the bag is empty
+
+	return ActualBag.letters.empty();
+}
+
+void Bag::insert(vector<SingleChar> h) {   //allows to insert chars and respective positions in the bag
+	if (h.size() == 1) {
+		ActualBag.letters.push_back(h[0]);
+		shuffle(ActualBag);
+	}
+	else {
+		ActualBag.letters.push_back(h[0]);
+		ActualBag.letters.push_back(h[1]);
+		shuffle(ActualBag);
+	}
+}
+
+BagOfLetters Bag::remove(int n) {  //allows to remove chars and respective positions from the bag
+	BagOfLetters v;
+
+	if (n == 1) {
+		v.letters.push_back(ActualBag.letters[0]);
+		ActualBag.letters.erase(ActualBag.letters.begin());
+		shuffle(ActualBag);
+	}
+	else {
+		v.letters.push_back(ActualBag.letters[0]);
+		v.letters.push_back(ActualBag.letters[1]);
+		ActualBag.letters.erase(ActualBag.letters.begin());
+		ActualBag.letters.erase(ActualBag.letters.begin() + 1);
+		shuffle(ActualBag);
+	}
+
+	return v;
 }
 
 int main()
@@ -441,17 +552,17 @@ int main()
 
 	BoardStruct& boardStruct = board.getBoardStruct();
 	board.showBoard(boardStruct);
+	
+	Bag bag(boardStruct, nPlayers);
+	CharsOnBoard charsOnBoard = bag.getActualBag();
+	cout << "N Letters: " << charsOnBoard.pos.size() << endl;
 
-	Bag bag(boardStruct);
-
-	for (const CharsOnBoard& word : boardStruct.charsOnBoard)
+	for (int i = 0; i < charsOnBoard.charWord.size(); i++)
 	{
 		cout << "-----------------" << endl;
-		for (int i = 0; i < word.charWord.size(); i++)
-		{		
-			cout << word.charWord[i] << "  " << word.pos[i].lin << word.pos[i].col << word.pos[i].dir << endl;
-		}	
+		cout << charsOnBoard.charWord[i] << "  " << charsOnBoard.pos[i].lin << charsOnBoard.pos[i].col << charsOnBoard.pos[i].dir << endl;
 	}
+
 	return 0;
 }
 
