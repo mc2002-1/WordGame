@@ -69,8 +69,7 @@ struct CharsPosition
 	{
 		if(lin == other.lin && col == other.col) // The line and column are enough for the comparison
 		{
-			return true;
-			
+			return true;	
 		}
 		else
 		{
@@ -99,6 +98,11 @@ typedef struct {
 	vector<WordsOnBoard> wordsOnBoard;
 }BoardStruct;
 
+struct Cell {
+	char character;
+	string color;
+};
+
 // ===================================== Board Class =====================================
 
 class Board {
@@ -122,7 +126,8 @@ public:
 	}
 
 	BoardStruct& getBoardStruct();
-	void showBoard();
+	void showBoard(vector<CharsPosition> c);
+	CharsPosition insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& charsOnBag);
 };
 
 // ===================================== Board Class functions =====================================
@@ -159,8 +164,8 @@ pair <string, vector<string>> Board::getTxtFilesInFolder() {
 
 // Reads the file chosen by the users and retrieves the saved game board information to reconstruct the board 
 BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txtFiles)
-// Although the function is big and with a lot of identationa, it was meant this way in order to only loop through the tex
-// file once to retrieve all the information regarding both the board and board characters, provinding an efficient code
+// Although the function is big and with a lot of identations, it was meant this way in order to only loop through the tex
+// file once to retrieve all the information regarding both the board and board characters, prioritizing program efficency
 {
 	bool validFile = false;
 	BoardStruct boardStruct;
@@ -286,24 +291,113 @@ BoardStruct& Board::getBoardStruct() {
 }
 
 // Prints the Board
-void Board::showBoard()
+void Board::showBoard(vector<CharsPosition> C)
 {
-	cout << "\n ------ Board Game ------ " << endl;
+	// c holds the position of the Char that will have a different color
 
+	cout << "\n ------ Board Game ------ " << endl;
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	cout << endl;
 	cout << BLUE << "  ";
 	for (int j = 0; j < boardStruct.boardCells.at(0).size(); j++)
 		cout << (char)('a' + j) << ' ';
 	cout << endl;
 	cout << NO_COLOR;
+	
+	int k = 0;
 	for (int i = 0; i < boardStruct.boardCells.size(); i++)
 	{
 		cout << BLUE << (char)('A' + i) << ' ' << NO_COLOR;
 		for (int j = 0; j < boardStruct.boardCells.at(i).size(); j++)
-			cout << boardStruct.boardCells.at(i).at(j) << ' ';
+			if (k <= C.size() && C[k].lin - 'A' == i && C[k].col - 'a' == j)
+			{
+				cout << k;
+				SetConsoleTextAttribute(hConsole, 7);
+				cout << boardStruct.boardCells.at(i).at(j) << ' ';
+				SetConsoleTextAttribute(hConsole, 2);
+				k++;
+			}
+			else
+			{
+				cout << boardStruct.boardCells.at(i).at(j) << ' ';
+			}
 		cout << endl;
 	}
 	cout << endl;
+
+}
+
+CharsPosition Board::insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& charsOnBag)
+{
+	// Less identation is better, provides better readibility. 
+	// For instance, GOOGLE engineers are asked to not have more than 3 identations in the code unless it can be justified
+	// This is the reason to validate inputs this way
+
+	bool validC = false;
+	char C;
+
+	while(!validC) // Checks for valid Letters
+	{ 
+		cout << "Insert letter: ";
+		cin >> C;
+		toupper(C);
+
+		const auto itL = find(charsOnHand.charWord.begin(), charsOnHand.charWord.end(), C);
+
+		if (itL != charsOnHand.charWord.end()) // If the Letter in the Player's hand
+		{
+			validC = true;
+		}
+		else
+		{
+			cout << "Letter " << C << " is not a word on your hand!" << endl;
+		}
+	}
+	const auto itL = find(charsOnHand.charWord.begin(), charsOnHand.charWord.end(), C);
+	const int idx = distance(charsOnHand.charWord.begin(), itL);
+
+	bool validPos = false;
+	string P;
+	CharsPosition cPos;
+	while (!validPos)
+	{
+		cout << "\nPosition: ";
+		cin >> P;
+		cPos.lin = P[0];
+		cPos.col = P[1];
+
+		const auto itPHand = find(charsOnHand.pos.begin(), charsOnHand.pos.end(), cPos);
+		const auto itPBag = find(charsOnBag.pos.begin(), charsOnBag.pos.end(), cPos);
+
+		if (itPHand != charsOnHand.pos.end() || itPBag != charsOnBag.pos.end())
+			// Mitigates the problem of not having the right position assossiated in the hand but in the bag
+		{	
+			validPos = true;
+			const int indexHand = distance(charsOnHand.pos.begin(), itPHand);
+			if (itPHand == charsOnHand.pos.end() && itPBag != charsOnBag.pos.end())
+			{
+				const int indexBag = distance(charsOnBag.pos.begin(), itPBag);
+				swap(charsOnBag.pos[indexBag], charsOnHand.pos[idx]);
+			}
+			cout << "lol";
+			charsOnHand.charWord.erase(charsOnHand.charWord.begin() + indexHand);
+			cout << "lo2";
+			charsOnHand.pos.erase(charsOnHand.pos.begin() + indexHand);
+			cout << "lo3";
+		}
+		else
+		{
+			cout << "This position is invalid!" << endl;
+		}
+	}
+	
+	if (boardStruct.boardCells[cPos.lin - 'A'][cPos.col - 'a'] == C)
+	{
+		boardStruct.boardCells[cPos.lin - 'A'][cPos.col - 'a'] = C;
+	}
+
+	return cPos;
+	
 }
 
 // ===================================== Bag Class =====================================
@@ -324,7 +418,6 @@ public:
 
 	void shuffle(CharsOnBoard& charsOnBoard);
 	bool isEmpty(const CharsOnBoard& charsOnBag);
-
 };
 
 // ===================================== Bag Class functions =====================================
@@ -511,6 +604,11 @@ void Hand::showHand()
 		cout << handLetters.charWord[l] << " ";
 	}
 	cout << "\n" << endl;
+	for (int l = 0; l < handLetters.nLetters; l++)
+	{
+		cout << handLetters.pos[l].lin << handLetters.pos[l].col << " ";
+	}
+	cout << "\n" << endl;
 }
 
 void Hand::switchHand(CharsOnBoard& handLetters, CharsOnBoard& bag)
@@ -560,6 +658,9 @@ public:
 
 	string getName();
 	void setName(string name);
+
+	void addPoints(int point);
+	int getPoints();
 };
 
 // ===================================== Player class functions =====================================
@@ -584,7 +685,33 @@ void Player::setName(string name_)
 	name = name_;
 }
 
+void Player::addPoints(int pt)
+{
+	points += pt;
+}
+
+int Player::getPoints()
+{
+	return points;
+}
+
 // ===================================== Non-class functions =====================================
+
+// Converts all characters of ‘s’ to lowercase
+void tolowerStr(string& s)
+// Because a pointer is used, a return is unecessary since the changes are occuring to the original variable
+{
+	// The added condition enables the use of words with random uppercase and lowercase chars
+	for (auto& c : s) if (!islower(c)) c = tolower(c);
+}
+//================================================================================
+// Converts all characters of ‘s’ to uppercase
+void toupperStr(string& s)
+// Because a pointer is used, a return is unecessary since the changes are occuring to the original variable
+{
+	// The added condition enables the use of words with random uppercase and lowercase chars
+	for (auto& c : s) if (!isupper(c)) c = toupper(c);
+}
 
 int read_nPlayers()
 {
@@ -628,7 +755,9 @@ int numLettersToEachPlayer(int nPlayers, int numLetters)
 		cout << "\nDo you want to change (Yes/No): ";
 		cin >> answ;
 
-		if (answ == "Yes")
+		toupperStr(answ);
+
+		if (answ == "YES")
 		{
 			while (!validHand)
 			{
@@ -645,7 +774,7 @@ int numLettersToEachPlayer(int nPlayers, int numLetters)
 			handSize = suggestHandSize;
 		}
 
-	} while (answ != "Yes" && answ != "No");
+	} while (answ != "YES" && answ != "NO");
 	return handSize;
 }
 
@@ -676,7 +805,7 @@ void showHelp() {
 	cout << CYAN << "S - " << WHITE << " This option will swap a letter of the Players Hand of letters with the bag of \n\n"
 		    "letters containing all letters on the board. \n\n";
 	cout << CYAN << "Q - " << WHITE << " The Player chooses to quit the game.\n" << endl;
-
+	
 	cout << "--------------------------------------------\n" << WHITE << endl;
 }
 
@@ -685,11 +814,14 @@ void showHelp() {
 int main()
 {
 	cout << "================ Multiplayer Board Game ================" << endl;
-
+	CharsPosition col;
+	vector<CharsPosition> vclCh;
+	col.col = -1;
+	vclCh.push_back(col);
 	// Initializing BOARD:
 	Board board;
 	BoardStruct& boardStruct = board.getBoardStruct();
-	board.showBoard();
+	board.showBoard(vclCh);
 
 	//Initializing BAG:
 	Bag bag(boardStruct);
@@ -719,62 +851,74 @@ int main()
 		Hand hand(handSize, charsOnBag);
 		hands.push_back(hand);
 		hands[id - 1].showHand();
-		//CharsOnBoard& f = hands[id - 1].getHand();
-		//hand.switchHand(f,charsOnBag);
-	
 	}
 	
 	// Game loop:
 
 	cout << " ------------- Game starting --------------\n" << endl;
+	CharsPosition clCh;
 	
+
 	while (nPlayers >= 2)
 	{
 		for (int pl = 0; pl < nPlayers; pl++)
 		{
-			cout << "Turn - Player " << players[pl].getId() << ": " << players[pl].getName() << endl;
-		
-			int nSwap = 1;
-			CharsOnBoard& hd = hands[pl].getHand();
-
-			char opt = readOption();
-			switch(opt)
+			cout << RED << "Turn - Player " << players[pl].getId() << ": " << players[pl].getName() << NO_COLOR << endl;
+			for (int sw = 0; sw < 2; sw++)
 			{
-			case 'H':
-				showHelp();
-				break;
-			case 'I':
-				break;
-			case 'P':
-				break;
-			case 'S':
-				if(!bag.isEmpty(charsOnBag))
-				{ 
-					cout << "Number of letters to swap (1 or 2): ";
-					cin >> nSwap;
-					int sw = 0;
+				bool exitOuterLoop = false;
+				cout << "lol1";
+				CharsOnBoard& hd = hands[pl].getHand();
+				cout << "lol2";
+				char opt = readOption();
+				switch (opt)
+				{
+				case 'H':
+					showHelp();
+					break;
+				case 'I':
 					hands[pl].showHand();
-					while (nSwap > 0 && nSwap <= 2 && sw < nSwap)
+					col = board.insertLetOnBoard(hd, charsOnBag);
+					vclCh.push_back(col);
+					if (!bag.isEmpty(charsOnBag))
 					{
-						for (sw = 0; sw < nSwap; sw++)
-						{
-							hands[pl].switchHand(hd, charsOnBag);
-							hands[pl].showHand();
-							bag.shuffle(charsOnBag);
-						}
+						hands[pl].getLettersFromBag(1, charsOnBag);
 					}
+
+					board.showBoard(vclCh);
+					break;
+				case 'P':
+					exitOuterLoop = true;
+					break;
+				case 'S':
+					if (!bag.isEmpty(charsOnBag))
+					{
+						hands[pl].switchHand(hd, charsOnBag);
+						hands[pl].showHand();
+						bag.shuffle(charsOnBag);
+					}
+					else
+					{
+						cout << "Bag is empty!" << endl;
+					}
+					break;
+				case 'Q':
+					exitOuterLoop = true;
+					players.erase(players.begin() + pl);
+					hands.erase(hands.begin() + pl);
+					nPlayers -= 1;
+					cout << "\nPlayer " << players[pl].getId() << ": " << players[pl].getName() << " has quit the game!" << endl;
+					break;
 				}
-				break;
-			case 'Q':
-				players.erase(players.begin() + pl);
-				hands.erase(hands.begin() + pl);
-				nPlayers -= 1;
-				cout << "\nPlayer " << players[pl].getId() << ": " << players[pl].getName() << " has quit the game!" << endl;
-				break;
+
+				if (exitOuterLoop)
+				{
+					break;
+				}
+				
 			}
 		}
 	}
-	return 0;
-	
+	return 0;	
 }
 
