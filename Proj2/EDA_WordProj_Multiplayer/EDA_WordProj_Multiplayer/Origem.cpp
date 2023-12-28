@@ -9,7 +9,9 @@
 #include <filesystem>
 #include <algorithm>  
 #include <random> 
-#include <set>
+#include <numeric>
+#include <cmath>
+
 
 //--------------------------------------------------------------------------------
 using namespace std;
@@ -87,52 +89,17 @@ typedef struct
 {
 	vector<CharsPosition> pos;
 	vector<char> charWord;
-	size_t nLetters;
+	int nLetters;
 } CharsOnBoard;
 
 typedef struct {
 	vector<vector<char>> boardCells;
-	size_t numLins;
-	size_t numCols;
+	int numLins;
+	int numCols;
 	vector<WordsOnBoard> wordsOnBoard;
 }BoardStruct;
 
-typedef struct {
-	char letter;
-	CharsPosition pos;
-} SingleChar;
-
-typedef struct {
-	vector<SingleChar> letters;
-} BagOfLetters;
-
-
-// ===================================== Non-class functions =====================================
-
-int read_nPlayers()
-{
-	// The user is asked the number of players that will play the game simultaneously
-
-	int n_players;
-	int min_n_players = 2; int max_n_players = 4; // Hardcoded range of players
-	bool valid_n_players = false;
-
-	do
-	{
-		cout << "\nNumber of players (2-4): ";
-		cin >> n_players;
-
-		if (n_players >= min_n_players && n_players <= max_n_players)
-		{ valid_n_players = true; }
-		else
-		{ cout << "Error: Number of players is invalid!" << endl; }
-
-	} while (!valid_n_players); // The loop will run until a valid number of players is inserted
-
-	return n_players;
-}
-
-// ===================================== Classes =====================================
+// ===================================== Board Class =====================================
 
 class Board {
 private:
@@ -145,7 +112,7 @@ private:
 	BoardStruct readBoardFile(const string& folder, const vector<string>& txtFiles);
 
 public:
-	Board() 
+	Board()
 	{
 		// Initializing members in the constructor
 		folder_file = getTxtFilesInFolder();
@@ -155,50 +122,7 @@ public:
 	}
 
 	BoardStruct& getBoardStruct();
-	void showBoard(const BoardStruct& b);
-};
-
-class Bag {
-private:
-	CharsOnBoard constructBag(BoardStruct& boardStruct, const int& nPlayers);
-	void shuffle(BagOfLetters& ActualBag);
-	BagOfLetters ActualBag;
-	CharsOnBoard bag;
-
-public:
-	Bag(BoardStruct& boardStruct, const int& nPlayers) 
-	{
-		// Initializing members in the constructor
-		bag = constructBag(boardStruct, nPlayers);
-		shuffle(ActualBag);
-	}
-	const CharsOnBoard& getActualBag() const {
-		return bag;
-	}
-	bool isEmpty(const BagOfLetters& ActualBag);
-	void insert(vector<SingleChar> h);
-	BagOfLetters remove(int n);
-};
-
-class Player
-{
-public:
-	int id_player;
-	string name;
-	int id;
-	pair<int, string> player_info;
-
-	Player() // Construct
-	{	
-		player_info = create_player(id, name);
-		id = player_info.first;
-		name = player_info.second;
-	}
-
-	pair<int, string> create_player(int id, string name)
-	{
-		
-	}
+	void showBoard();
 };
 
 // ===================================== Board Class functions =====================================
@@ -282,8 +206,8 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 			}
 
 			// Board size variables
-			size_t numCol;
-			size_t numLin;
+			int numCol;
+			int numLin;
 			bool posStrFound = false;
 
 			// Board words and corresponding position variables:
@@ -298,7 +222,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 				if (!posStrFound)
 				{
 					string posStr = fileLine.substr(fileLine.find_first_of(":") + 1, fileLine.size());
-					size_t x_pos = posStr.find_first_of("x");
+					int x_pos = posStr.find_first_of("x");
 
 					if (x_pos != string::npos) /*string::npos is used to represent "no position". If x_pos is not equal to string::npos, it means that the substring "x" was found in the string.*/
 					{
@@ -319,7 +243,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					fileLine.erase(it, fileLine.end()); /*Removing the spaces between the word and its corresponding position*/
 
 					wordsOnBoard.word = fileLine.substr(3);
-					size_t wordSize = wordsOnBoard.word.size();
+					int wordSize = wordsOnBoard.word.size();
 
 					// Position Information:
 					wordPos.lin = fileLine[0]; wordPos.col = fileLine[1]; wordPos.dir = fileLine[2];
@@ -346,7 +270,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					boardStruct.wordsOnBoard.push_back(wordsOnBoard);
 				}
 
-				size_t begin = fileLine.find("-"); // Finds the '-' char for on the next iteration start to populate the cells and save the words on the structure
+				int begin = fileLine.find("-"); // Finds the '-' char for on the next iteration start to populate the cells and save the words on the structure
 				if (begin != string::npos)
 				{
 					beginWordRead = true;
@@ -362,41 +286,62 @@ BoardStruct& Board::getBoardStruct() {
 }
 
 // Prints the Board
-void Board::showBoard(const BoardStruct& b)
+void Board::showBoard()
 {
 	cout << "\n ------ Board Game ------ " << endl;
 
 	cout << endl;
 	cout << BLUE << "  ";
-	for (size_t j = 0; j < b.boardCells.at(0).size(); j++)
+	for (int j = 0; j < boardStruct.boardCells.at(0).size(); j++)
 		cout << (char)('a' + j) << ' ';
 	cout << endl;
 	cout << NO_COLOR;
-	for (size_t i = 0; i < b.boardCells.size(); i++)
+	for (int i = 0; i < boardStruct.boardCells.size(); i++)
 	{
 		cout << BLUE << (char)('A' + i) << ' ' << NO_COLOR;
-		for (size_t j = 0; j < b.boardCells.at(i).size(); j++)
-			cout << b.boardCells.at(i).at(j) << ' ';
+		for (int j = 0; j < boardStruct.boardCells.at(i).size(); j++)
+			cout << boardStruct.boardCells.at(i).at(j) << ' ';
 		cout << endl;
 	}
 	cout << endl;
 }
 
+// ===================================== Bag Class =====================================
+
+class Bag {
+private:
+	CharsOnBoard constructBag(BoardStruct& boardStruct);
+	CharsOnBoard charsOnBag;
+
+public:
+	Bag(BoardStruct& boardStruct) 
+	{
+		// Initializing members in the constructor
+		charsOnBag = constructBag(boardStruct);
+	}
+	
+	CharsOnBoard& getBag();
+
+	void shuffle(CharsOnBoard& charsOnBoard);
+	bool isEmpty(const CharsOnBoard& charsOnBag);
+
+};
+
 // ===================================== Bag Class functions =====================================
 
-CharsOnBoard Bag::constructBag(BoardStruct& boardStruct, const int& nPlayers)
+CharsOnBoard Bag::constructBag(BoardStruct& boardStruct)
 {
 	// Word characters and corresponding position variables
 	CharsOnBoard charsOnBoard;
 	CharsPosition charsPosition;
-	
+
 	for (const WordsOnBoard& words : boardStruct.wordsOnBoard)
 	{
-		size_t wordSize = words.word.size();
+		int wordSize = words.word.size();
 
 		charsOnBoard.charWord.reserve(wordSize); /* Reserve pre - allocates memory to the vector improving the efficiency of the code */
 		charsOnBoard.pos.reserve(wordSize);
-	
+
 		// Decomposing the board words into each character and its position
 		switch (words.pos.dir)
 		{
@@ -409,17 +354,17 @@ CharsOnBoard Bag::constructBag(BoardStruct& boardStruct, const int& nPlayers)
 
 				// Checks whether the character is specific to a word or belongs to two words. If so, the + char references that in the char position
 				if (words.pos.lin - 'A' > 0 && words.pos.lin - 'A' < boardStruct.numLins &&
-				   (boardStruct.boardCells[charsPosition.lin - 'A' - 1][charsPosition.col - 'a'] == '.' ||
-					boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.'))
+					(boardStruct.boardCells[charsPosition.lin - 'A' - 1][charsPosition.col - 'a'] == '.' ||
+						boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.'))
 				{
 					charsPosition.dir = 'H';
 				}
-				else if(words.pos.lin - 'A' == 0 && 
-					 boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.')
+				else if (words.pos.lin - 'A' == 0 && /* Upper border */
+					boardStruct.boardCells[charsPosition.lin - 'A' + 1][charsPosition.col - 'a'] == '.')
 				{
 					charsPosition.dir = 'H';
 				}
-				else if (words.pos.lin - 'A' == boardStruct.numLins - 1 &&
+				else if (words.pos.lin - 'A' == boardStruct.numLins - 1 && /* Lower border */
 					boardStruct.boardCells[charsPosition.lin - 'A' - 1][charsPosition.col - 'a'] == '.')
 				{
 					charsPosition.dir = 'H';
@@ -434,7 +379,7 @@ CharsOnBoard Bag::constructBag(BoardStruct& boardStruct, const int& nPlayers)
 				{
 					charsOnBoard.charWord.push_back(words.word[c]); // Character
 					charsOnBoard.pos.push_back(charsPosition); // Position
-				}		
+				}
 			}
 			break;
 
@@ -450,17 +395,17 @@ CharsOnBoard Bag::constructBag(BoardStruct& boardStruct, const int& nPlayers)
 
 				// Checks whether the character is specific to a word or belongs to two words. If so, the + char references that in the char position
 				if (words.pos.col - 'a' > 0 && words.pos.col - 'a' < boardStruct.numCols &&
-				   (boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' - 1] == '.' ||
-				    boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' + 1] == '.'))
+					(boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' - 1] == '.' ||
+						boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' + 1] == '.'))
 				{
 					charsPosition.dir = 'V';
 				}
-				else if (words.pos.col - 'a' == 0 &&
+				else if (words.pos.col - 'a' == 0 && /* Left border */
 					boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' + 1] == '.')
 				{
 					charsPosition.dir = 'V';
 				}
-				else if (words.pos.col - 'a' == boardStruct.numCols &&
+				else if (words.pos.col - 'a' == boardStruct.numCols && /* Right border */
 					boardStruct.boardCells[charsPosition.lin - 'A'][charsPosition.col - 'a' - 1] == '.')
 				{
 					charsPosition.dir = 'V';
@@ -484,85 +429,352 @@ CharsOnBoard Bag::constructBag(BoardStruct& boardStruct, const int& nPlayers)
 	return charsOnBoard;
 }
 
-void Bag::shuffle(BagOfLetters& ActualBag) {    //shuffling using the Fisher-Yates shuffle algorithm
+CharsOnBoard& Bag::getBag() {
+	return charsOnBag;
+}
 
+void Bag::shuffle(CharsOnBoard& charsOnBoard) //Shuffling using the Fisher-Yates shuffle algorithm
+{
 	random_device rd;
-	std::mt19937 g(rd());
-	std::shuffle(ActualBag.letters.begin(), ActualBag.letters.end(), g);
+	mt19937 g(rd());
 
-}
+	vector<int> indices(charsOnBoard.charWord.size());
+	iota(indices.begin(), indices.end(), 0); /* Creates a vector of incremental int values starting from 0 */
+	std::shuffle(indices.begin(), indices.end(), g);
 
-bool Bag::isEmpty(const BagOfLetters& ActualBag) { //to check if the bag is empty
-
-	return ActualBag.letters.empty();
-}
-
-void Bag::insert(vector<SingleChar> h) {   //allows to insert chars and respective positions in the bag
-	if (h.size() == 1) {
-		ActualBag.letters.push_back(h[0]);
-		shuffle(ActualBag);
-	}
-	else {
-		ActualBag.letters.push_back(h[0]);
-		ActualBag.letters.push_back(h[1]);
-		shuffle(ActualBag);
+	// Swap elements based on shuffled indices
+	for (int i = 0; i < indices.size(); ++i) {
+		if (i != indices[i]) {
+			swap(charsOnBoard.pos[i], charsOnBoard.pos[indices[i]]);
+			swap(charsOnBoard.charWord[i], charsOnBoard.charWord[indices[i]]);
+		}
 	}
 }
 
-BagOfLetters Bag::remove(int n) {  //allows to remove chars and respective positions from the bag
-	BagOfLetters v;
-
-	if (n == 1) {
-		v.letters.push_back(ActualBag.letters[0]);
-		ActualBag.letters.erase(ActualBag.letters.begin());
-		shuffle(ActualBag);
-	}
-	else {
-		v.letters.push_back(ActualBag.letters[0]);
-		v.letters.push_back(ActualBag.letters[1]);
-		ActualBag.letters.erase(ActualBag.letters.begin());
-		ActualBag.letters.erase(ActualBag.letters.begin() + 1);
-		shuffle(ActualBag);
-	}
-
-	return v;
+bool Bag::isEmpty(const CharsOnBoard& bag) { // To check if the bag is empty
+	return bag.charWord.empty();
 }
+
+// ===================================== Hand Class =====================================
+
+class Hand
+{
+private:
+	CharsOnBoard handLetters;
+
+public:
+	Hand(const int numLetters, CharsOnBoard& bag)
+	{
+		handLetters = getLettersFromBag(numLetters, bag);
+	}
+	CharsOnBoard& getHand();
+	CharsOnBoard getLettersFromBag(const int handSize, CharsOnBoard& bag);
+	void showHand();
+	void switchHand(CharsOnBoard& handLetters, CharsOnBoard& bag);
+};
+
+// ===================================== Hand Class functions =====================================
+
+CharsOnBoard Hand::getLettersFromBag(const int numLetters, CharsOnBoard& bag)
+{
+	CharsOnBoard handLetters;
+
+	handLetters.charWord.reserve(numLetters);
+	handLetters.pos.reserve(numLetters);
+	handLetters.nLetters = numLetters;
+
+	for (int let = 0; let < numLetters; let++)
+	{
+		// Populating the Hand
+		handLetters.charWord.push_back(bag.charWord[let]);
+		handLetters.pos.push_back(bag.pos[let]);
+	}
+
+	// Remove the specific Letters from the Bag reference
+	bag.charWord.erase(bag.charWord.begin(), bag.charWord.begin() + numLetters);
+	bag.pos.erase(bag.pos.begin(), bag.pos.begin() + numLetters);
+	bag.nLetters -= numLetters;
+
+	return handLetters;
+}
+
+CharsOnBoard& Hand::getHand()
+{
+	return handLetters;
+}
+
+void Hand::showHand()
+{
+	cout << "Hand: ";
+	for (int l = 0; l < handLetters.nLetters; l++)
+	{
+		cout << handLetters.charWord[l] << " ";
+	}
+	cout << "\n" << endl;
+}
+
+void Hand::switchHand(CharsOnBoard& handLetters, CharsOnBoard& bag)
+{
+	// Only one letter can be switched at a time. 
+	// This way is more robust to wrong inputs and simple to implement when deconstructing the string used with 2 Chars 
+
+	char replaceL;
+
+	cout << "Letter to switch: ";
+	cin >> replaceL;
+
+	CharsOnBoard aux;
+	const auto letIt = find(handLetters.charWord.begin(), handLetters.charWord.end(), replaceL);
+	const int index = distance(handLetters.charWord.begin(), letIt);
+
+	if (letIt != handLetters.charWord.end())
+	{
+		// Swapping letter with bag
+		swap(bag.charWord[bag.charWord.size() - 1], handLetters.charWord[index]);
+	}
+	else
+	{
+		cout << "\nInvalid Letter!" << endl;
+	}
+}
+
+// ===================================== Player Class =====================================
+
+class Player
+{
+private:
+	int id;
+	string name;
+	int points;
+public:
+	Player(int id_, string name_) // Constructor
+	{	
+		setId(id_);
+		setName(name_); 
+		points = 0;
+		cout << "Player " << id_ << " named " << name_ << " has been created!" << endl;
+	}
+
+	int getId();
+	void setId(int id);
+
+	string getName();
+	void setName(string name);
+};
+
+// ===================================== Player class functions =====================================
+
+int Player::getId()
+{
+	return id;
+}
+
+void Player::setId(int id_)
+{
+	id = id_;
+}
+
+string Player::getName()
+{
+	return name;
+}
+
+void Player::setName(string name_)
+{
+	name = name_;
+}
+
+// ===================================== Non-class functions =====================================
+
+int read_nPlayers()
+{
+	// The user is asked the number of players that will play the game simultaneously
+
+	int n_players;
+	int min_n_players = 2; int max_n_players = 4; // Hardcoded range of players
+	bool valid_n_players = false;
+
+	do
+	{
+		cout << "\nNumber of players (2-4): ";
+		cin >> n_players;
+
+		if (n_players >= min_n_players && n_players <= max_n_players)
+		{
+			valid_n_players = true;
+		}
+		else
+		{
+			cout << "Error: Number of players is invalid!" << endl;
+		}
+
+	} while (!valid_n_players); // The loop will run until a valid number of players is inserted
+
+	return n_players;
+}
+
+int numLettersToEachPlayer(int nPlayers, int numLetters)
+{
+	string answ;
+	int suggestHandSize = static_cast<int>(ceil(0.5 * numLetters / nPlayers));
+	int maxHandSize = static_cast<int>(ceil(0.8 * numLetters / nPlayers));
+	
+	bool validHand = false;
+	int handSize = 0;
+
+	do
+	{
+		cout << "Suggested number of letters to distribute for each Player: " << suggestHandSize;
+		cout << "\nDo you want to change (Yes/No): ";
+		cin >> answ;
+
+		if (answ == "Yes")
+		{
+			while (!validHand)
+			{
+				cout << "Hand size (2 - " << maxHandSize << "): ";
+				cin >> handSize;
+				if (handSize >= 2 && handSize <= maxHandSize)
+				{
+					validHand = true;
+				}
+			}
+		}
+		else
+		{
+			handSize = suggestHandSize;
+		}
+
+	} while (answ != "Yes" && answ != "No");
+	return handSize;
+}
+
+char readOption() { // Reads user game option and returns the choosen one
+	cout << "H - Help | " << "I - Insert words | " << "P - Pass play | "  << "S - Swap | " << "Q - Quit" << endl << "\nOption: ";
+
+	char inserted;
+	cin >> inserted;
+
+	if (!isupper(inserted))
+	{
+		inserted = toupper(inserted);
+	}
+
+	return inserted;
+}
+
+void showHelp() {
+	cout << CYAN << "\n\n ------------------ Help ------------------\n" << endl;
+
+	cout << CYAN << "I - " << WHITE << "The letter will be placed according to the selected position on the Board cell.\n"
+			"If Aa will be chosen, the letter will be placed in the row A and column a. The letters\n"
+			"must be placed according to the order of the word. The placed letter, if valid,\n"
+			"will be displayed in red. If the Player completes a word he will rreceive 1 point.\n"
+			"In case the Player completes 2 words with one letter, he will receive 2 points.\n\n";
+
+	cout << CYAN << "P - " << WHITE << "The play will be passed.\n\n";
+	cout << CYAN << "S - " << WHITE << " This option will swap a letter of the Players Hand of letters with the bag of \n\n"
+		    "letters containing all letters on the board. \n\n";
+	cout << CYAN << "Q - " << WHITE << " The Player chooses to quit the game.\n" << endl;
+
+	cout << "--------------------------------------------\n" << WHITE << endl;
+}
+
+// =================================================== Main =================================================
 
 int main()
 {
-	cout << "============== Multiplayer Board Game ==============" << endl;
+	cout << "================ Multiplayer Board Game ================" << endl;
 
-	int nPlayers = 2;
-	nPlayers = read_nPlayers();
-
+	// Initializing BOARD:
 	Board board;
-
-	/*
-	Player player;
-	Player game_players[4];
-	
-	string name;
-	for (int i = 0; i < nPlayers; i++)
-	{
-		cout << "Player " << i+1 << " name: " << endl;
-		cin >> name;
-		game_players[i] = player.create_player(i, name);
-	}
-	 */
-
 	BoardStruct& boardStruct = board.getBoardStruct();
-	board.showBoard(boardStruct);
-	
-	Bag bag(boardStruct, nPlayers);
-	CharsOnBoard charsOnBoard = bag.getActualBag();
-	cout << "N Letters: " << charsOnBoard.pos.size() << endl;
+	board.showBoard();
 
-	for (int i = 0; i < charsOnBoard.charWord.size(); i++)
+	//Initializing BAG:
+	Bag bag(boardStruct);
+	CharsOnBoard& charsOnBag = bag.getBag();
+	bag.shuffle(charsOnBag);
+
+	// Intializing PLAYERS and HANDS:
+	int nPlayers = read_nPlayers();
+	int handSize = numLettersToEachPlayer(nPlayers, charsOnBag.nLetters);
+
+	cout << "\n -------- Player and Hand creation --------\n" << endl;
+	vector<Player> players;
+	players.reserve(nPlayers); /* Memory pre-allocation */
+
+	vector<Hand> hands;
+	hands.reserve(nPlayers);
+
+	// This loop will initilize the players and construct their corresponding hands, mapped through the loop iterator
+	for (int id = 1; id <= nPlayers; id++) 
 	{
-		cout << "-----------------" << endl;
-		cout << charsOnBoard.charWord[i] << "  " << charsOnBoard.pos[i].lin << charsOnBoard.pos[i].col << charsOnBoard.pos[i].dir << endl;
-	}
+		string name;
+		cout << "Player " << id << " | " << "Insert name: ";
+		cin >> name;
+		Player pl(id, name);
+		players.push_back(pl);
 
+		Hand hand(handSize, charsOnBag);
+		hands.push_back(hand);
+		hands[id - 1].showHand();
+		//CharsOnBoard& f = hands[id - 1].getHand();
+		//hand.switchHand(f,charsOnBag);
+	
+	}
+	
+	// Game loop:
+
+	cout << " ------------- Game starting --------------\n" << endl;
+	
+	while (nPlayers >= 2)
+	{
+		for (int pl = 0; pl < nPlayers; pl++)
+		{
+			cout << "Turn - Player " << players[pl].getId() << ": " << players[pl].getName() << endl;
+		
+			int nSwap = 1;
+			CharsOnBoard& hd = hands[pl].getHand();
+
+			char opt = readOption();
+			switch(opt)
+			{
+			case 'H':
+				showHelp();
+				break;
+			case 'I':
+				break;
+			case 'P':
+				break;
+			case 'S':
+				if(!bag.isEmpty(charsOnBag))
+				{ 
+					cout << "Number of letters to swap (1 or 2): ";
+					cin >> nSwap;
+					int sw = 0;
+					hands[pl].showHand();
+					while (nSwap > 0 && nSwap <= 2 && sw < nSwap)
+					{
+						for (sw = 0; sw < nSwap; sw++)
+						{
+							hands[pl].switchHand(hd, charsOnBag);
+							hands[pl].showHand();
+							bag.shuffle(charsOnBag);
+						}
+					}
+				}
+				break;
+			case 'Q':
+				players.erase(players.begin() + pl);
+				hands.erase(hands.begin() + pl);
+				nPlayers -= 1;
+				cout << "\nPlayer " << players[pl].getId() << ": " << players[pl].getName() << " has quit the game!" << endl;
+				break;
+			}
+		}
+	}
 	return 0;
+	
 }
 
