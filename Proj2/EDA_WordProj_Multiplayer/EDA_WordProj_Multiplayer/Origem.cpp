@@ -11,7 +11,7 @@
 #include <random> 
 #include <numeric>
 #include <cmath>
-
+#include <cctype>
 
 //--------------------------------------------------------------------------------
 using namespace std;
@@ -127,7 +127,7 @@ public:
 
 	BoardStruct& getBoardStruct();
 	void showBoard(vector<CharsPosition> c);
-	CharsPosition insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& charsOnBag);
+	pair<int, CharsPosition> insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& charsOnBag);
 };
 
 // ===================================== Board Class functions =====================================
@@ -293,9 +293,6 @@ BoardStruct& Board::getBoardStruct() {
 // Prints the Board
 void Board::showBoard(vector<CharsPosition> C)
 {
-	// c holds the position of the Char that will have a different color
-
-	cout << "\n ------ Board Game ------ " << endl;
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	cout << endl;
 	cout << BLUE << "  ";
@@ -303,31 +300,33 @@ void Board::showBoard(vector<CharsPosition> C)
 		cout << (char)('a' + j) << ' ';
 	cout << endl;
 	cout << NO_COLOR;
-	
-	int k = 0;
+
 	for (int i = 0; i < boardStruct.boardCells.size(); i++)
 	{
 		cout << BLUE << (char)('A' + i) << ' ' << NO_COLOR;
 		for (int j = 0; j < boardStruct.boardCells.at(i).size(); j++)
-			if (k <= C.size() && C[k].lin - 'A' == i && C[k].col - 'a' == j)
+		{
+			CharsPosition currentPos;
+			currentPos.lin = 'A' + i;
+			currentPos.col = 'a' + j;
+
+			if (find(C.begin(), C.end(), currentPos) != C.end())
 			{
-				cout << k;
-				SetConsoleTextAttribute(hConsole, 7);
-				cout << boardStruct.boardCells.at(i).at(j) << ' ';
 				SetConsoleTextAttribute(hConsole, 2);
-				k++;
+				cout << boardStruct.boardCells.at(i).at(j) << ' ';
+				SetConsoleTextAttribute(hConsole, 7);
 			}
 			else
 			{
 				cout << boardStruct.boardCells.at(i).at(j) << ' ';
 			}
+		}
 		cout << endl;
 	}
 	cout << endl;
-
 }
 
-CharsPosition Board::insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& charsOnBag)
+pair<int, CharsPosition> Board::insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& charsOnBag)
 {
 	// Less identation is better, provides better readibility. 
 	// For instance, GOOGLE engineers are asked to not have more than 3 identations in the code unless it can be justified
@@ -336,11 +335,11 @@ CharsPosition Board::insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& c
 	bool validC = false;
 	char C;
 
-	while(!validC) // Checks for valid Letters
-	{ 
+	while (!validC) // Checks for valid Letters on the Hand
+	{
 		cout << "Insert letter: ";
 		cin >> C;
-		toupper(C);
+		C = toupper(C);
 
 		const auto itL = find(charsOnHand.charWord.begin(), charsOnHand.charWord.end(), C);
 
@@ -353,52 +352,76 @@ CharsPosition Board::insertLetOnBoard(CharsOnBoard& charsOnHand, CharsOnBoard& c
 			cout << "Letter " << C << " is not a word on your hand!" << endl;
 		}
 	}
-	const auto itL = find(charsOnHand.charWord.begin(), charsOnHand.charWord.end(), C);
-	const int idx = distance(charsOnHand.charWord.begin(), itL);
 
-	bool validPos = false;
+	bool validPos = false; 
 	string P;
 	CharsPosition cPos;
-	while (!validPos)
+	while (!validPos) // Checks for valid Letter position on the Hand
 	{
-		cout << "\nPosition: ";
+		cout << "Position: ";
 		cin >> P;
 		cPos.lin = P[0];
 		cPos.col = P[1];
 
 		const auto itPHand = find(charsOnHand.pos.begin(), charsOnHand.pos.end(), cPos);
-		const auto itPBag = find(charsOnBag.pos.begin(), charsOnBag.pos.end(), cPos);
 
-		if (itPHand != charsOnHand.pos.end() || itPBag != charsOnBag.pos.end())
-			// Mitigates the problem of not having the right position assossiated in the hand but in the bag
-		{	
-			validPos = true;
-			const int indexHand = distance(charsOnHand.pos.begin(), itPHand);
-			if (itPHand == charsOnHand.pos.end() && itPBag != charsOnBag.pos.end())
+		if (itPHand != charsOnHand.pos.end() && isupper(P[0]) && islower(P[1]))
+		{
+			const int idx = distance(charsOnHand.pos.begin(), itPHand);
+			if (charsOnHand.charWord[idx] == C)
 			{
-				const int indexBag = distance(charsOnBag.pos.begin(), itPBag);
-				swap(charsOnBag.pos[indexBag], charsOnHand.pos[idx]);
+				validPos = true;
 			}
-			cout << "lol";
-			charsOnHand.charWord.erase(charsOnHand.charWord.begin() + indexHand);
-			cout << "lo2";
-			charsOnHand.pos.erase(charsOnHand.pos.begin() + indexHand);
-			cout << "lo3";
 		}
 		else
 		{
 			cout << "This position is invalid!" << endl;
 		}
 	}
-	
-	if (boardStruct.boardCells[cPos.lin - 'A'][cPos.col - 'a'] == C)
-	{
-		boardStruct.boardCells[cPos.lin - 'A'][cPos.col - 'a'] = C;
-	}
 
-	return cPos;
-	
+	int points = 0;
+	const auto itPHand = find(charsOnHand.pos.begin(), charsOnHand.pos.end(), cPos);
+	const int idx = distance(charsOnHand.pos.begin(), itPHand);
+	for (WordsOnBoard& w : boardStruct.wordsOnBoard)
+	{
+		for (int c = 0; c < charsOnHand.charWord.size(); c++)
+		{
+			if (w.word[0] == C && w.pos.col == cPos.col && w.pos.lin)
+			{
+				if (w.word.size() == 1)
+				{
+					points++; // Already accounts for the possible second point through looping
+				}
+				w.word.erase(w.word.begin());
+				switch (w.pos.dir)
+				{
+				case 'H':
+					w.pos.col++;
+				case 'V':
+					w.pos.lin++;
+				}
+				charsOnHand.charWord.erase(charsOnHand.charWord.begin() + idx);
+				charsOnHand.pos.erase(charsOnHand.pos.begin() + idx);
+				return make_pair(points,cPos);
+			}
+			else 
+			{
+				cPos.dir = '-';
+			}
+		}
+	}
+	return make_pair(points, cPos);
 }
+
+/*===============================================================================================================*/
+	/* Implementation of the condition to verify if the char is inserted ib the beginning of a word or sequentially:*/
+	// I would star by looping through all the first letters of the structure boardStruct.WordsOnBoard accessing the 
+	// positions (line and column) of the first letter in each word. I would implement a condition to verify if it matches
+	// If so, the letter is inserted. Furthermore, this position struc will be deleted so that if the insert funtion is used
+	// in a following iteration, the first position of the word would be the index right after the deleted one. This way,
+	// a sequential comparison with each letter in each word can be accomplished. From here, the points could computed also,
+	// accessing the direction of the word inserted (+).
+	/*===============================================================================================================*/
 
 // ===================================== Bag Class =====================================
 
@@ -556,31 +579,41 @@ private:
 	CharsOnBoard handLetters;
 
 public:
-	Hand(const int numLetters, CharsOnBoard& bag)
+	Hand(const int numLetters, CharsOnBoard& bag, bool createHand)
 	{
-		handLetters = getLettersFromBag(numLetters, bag);
+		handLetters = getLettersFromBag(numLetters, bag, createHand);
 	}
 	CharsOnBoard& getHand();
-	CharsOnBoard getLettersFromBag(const int handSize, CharsOnBoard& bag);
+	CharsOnBoard& getLettersFromBag(const int handSize, CharsOnBoard& bag, bool createHand);
 	void showHand();
-	void switchHand(CharsOnBoard& handLetters, CharsOnBoard& bag);
+	void switchHand(CharsOnBoard& bag);
+	bool playableHand(BoardStruct& boardStruct);
 };
 
 // ===================================== Hand Class functions =====================================
 
-CharsOnBoard Hand::getLettersFromBag(const int numLetters, CharsOnBoard& bag)
+CharsOnBoard& Hand::getLettersFromBag(const int numLetters, CharsOnBoard& bag, bool createHand)
 {
-	CharsOnBoard handLetters;
-
 	handLetters.charWord.reserve(numLetters);
 	handLetters.pos.reserve(numLetters);
-	handLetters.nLetters = numLetters;
-
-	for (int let = 0; let < numLetters; let++)
+	if (createHand)
 	{
-		// Populating the Hand
-		handLetters.charWord.push_back(bag.charWord[let]);
-		handLetters.pos.push_back(bag.pos[let]);
+		handLetters.nLetters = numLetters;
+		for (int let = 0; let < numLetters; let++)
+		{
+			// Populating the Hand
+			handLetters.charWord.push_back(bag.charWord[let]);
+			handLetters.pos.push_back(bag.pos[let]);
+		}
+	}
+	else
+	{
+		for (int let = 0; let < numLetters; let++)
+		{
+			// Populating the Hand
+			handLetters.charWord.push_back(bag.charWord[let]);
+			handLetters.pos.push_back(bag.pos[let]);
+		}
 	}
 
 	// Remove the specific Letters from the Bag reference
@@ -601,17 +634,12 @@ void Hand::showHand()
 	cout << "Hand: ";
 	for (int l = 0; l < handLetters.nLetters; l++)
 	{
-		cout << handLetters.charWord[l] << " ";
-	}
-	cout << "\n" << endl;
-	for (int l = 0; l < handLetters.nLetters; l++)
-	{
-		cout << handLetters.pos[l].lin << handLetters.pos[l].col << " ";
+		cout << handLetters.charWord[l] << ": " << handLetters.pos[l].lin << handLetters.pos[l].col << " | ";
 	}
 	cout << "\n" << endl;
 }
 
-void Hand::switchHand(CharsOnBoard& handLetters, CharsOnBoard& bag)
+void Hand::switchHand(CharsOnBoard& bag)
 {
 	// Only one letter can be switched at a time. 
 	// This way is more robust to wrong inputs and simple to implement when deconstructing the string used with 2 Chars 
@@ -634,6 +662,22 @@ void Hand::switchHand(CharsOnBoard& handLetters, CharsOnBoard& bag)
 	{
 		cout << "\nInvalid Letter!" << endl;
 	}
+}
+
+bool Hand::playableHand(BoardStruct& boardStruct) // Ensures there are playable Letters on the Hand
+{
+	for (WordsOnBoard& w : boardStruct.wordsOnBoard)
+	{
+		for (int c = 0; c < handLetters.charWord.size(); c++)
+		{
+			if (w.word[0] == handLetters.charWord[c] && w.pos.col == handLetters.pos[c].col && w.pos.lin == handLetters.pos[c].lin)
+			{
+				return true;
+			}
+		}
+
+	}
+	return false;
 }
 
 // ===================================== Player Class =====================================
@@ -660,7 +704,7 @@ public:
 	void setName(string name);
 
 	void addPoints(int point);
-	int getPoints();
+	int& getPoints();
 };
 
 // ===================================== Player class functions =====================================
@@ -690,7 +734,7 @@ void Player::addPoints(int pt)
 	points += pt;
 }
 
-int Player::getPoints()
+int& Player::getPoints()
 {
 	return points;
 }
@@ -816,8 +860,6 @@ int main()
 	cout << "================ Multiplayer Board Game ================" << endl;
 	CharsPosition col;
 	vector<CharsPosition> vclCh;
-	col.col = -1;
-	vclCh.push_back(col);
 	// Initializing BOARD:
 	Board board;
 	BoardStruct& boardStruct = board.getBoardStruct();
@@ -839,6 +881,7 @@ int main()
 	vector<Hand> hands;
 	hands.reserve(nPlayers);
 
+
 	// This loop will initilize the players and construct their corresponding hands, mapped through the loop iterator
 	for (int id = 1; id <= nPlayers; id++) 
 	{
@@ -848,18 +891,21 @@ int main()
 		Player pl(id, name);
 		players.push_back(pl);
 
-		Hand hand(handSize, charsOnBag);
+		Hand hand(handSize, charsOnBag, true);
 		hands.push_back(hand);
+		CharsOnBoard& charsOnHand = hands[id - 1].getHand();
 		hands[id - 1].showHand();
 	}
 	
 	// Game loop:
 
 	cout << " ------------- Game starting --------------\n" << endl;
+	board.showBoard(vclCh);
+	pair<int, CharsPosition> info;
+	int point;
 	CharsPosition clCh;
 	
-
-	while (nPlayers >= 2)
+	while (nPlayers >= 2 || boardStruct.wordsOnBoard.empty())
 	{
 		for (int pl = 0; pl < nPlayers; pl++)
 		{
@@ -867,25 +913,43 @@ int main()
 			for (int sw = 0; sw < 2; sw++)
 			{
 				bool exitOuterLoop = false;
-				cout << "lol1";
 				CharsOnBoard& hd = hands[pl].getHand();
-				cout << "lol2";
+				int& pl_point = players[pl].getPoints();
 				char opt = readOption();
 				switch (opt)
 				{
 				case 'H':
 					showHelp();
+					sw -= 1;
 					break;
 				case 'I':
 					hands[pl].showHand();
-					col = board.insertLetOnBoard(hd, charsOnBag);
-					vclCh.push_back(col);
-					if (!bag.isEmpty(charsOnBag))
+					if (hands[pl].playableHand(boardStruct))
 					{
-						hands[pl].getLettersFromBag(1, charsOnBag);
+						info = board.insertLetOnBoard(hd, charsOnBag);
+						point = info.first;
+						col = info.second;
+						if (col.dir != '-')
+						{
+							vclCh.push_back(col);
+							players[pl].addPoints(point);
+							if (!bag.isEmpty(charsOnBag))
+							{
+								hands[pl].getLettersFromBag(1, charsOnBag, false);
+								hands[pl].showHand();
+							}
+						}
+						else 
+						{
+							sw -= 1;
+							cout << "This Letter does not respect the sequential order of the words! Try again." << endl;
+						}
+						board.showBoard(vclCh);
 					}
-
-					board.showBoard(vclCh);
+					else
+					{
+						cout << RED << "Your HAND does not contain valid Letters. Your options are to PASS or SWAP! Try again."<< NO_COLOR <<endl;
+					}
 					break;
 				case 'P':
 					exitOuterLoop = true;
@@ -893,7 +957,9 @@ int main()
 				case 'S':
 					if (!bag.isEmpty(charsOnBag))
 					{
-						hands[pl].switchHand(hd, charsOnBag);
+						hands[pl].showHand();
+						hands[pl].switchHand(charsOnBag);
+						cout << "New ";
 						hands[pl].showHand();
 						bag.shuffle(charsOnBag);
 					}
@@ -919,6 +985,18 @@ int main()
 			}
 		}
 	}
+
+	vector<int> finalpoints;
+	for (int pl = 0; pl < nPlayers; pl++)
+	{
+		finalpoints.push_back(players[pl].getPoints());
+	}
+
+	auto maxElement = max_element(finalpoints.begin(), finalpoints.end());
+	int dis = distance(finalpoints.begin(), maxElement);
+
+	cout << RED << "Player (Id:" << players[dis].getId() << ") " << players[dis].getName() << " has won the game with " << finalpoints[dis] << " points!" << NO_COLOR << endl;
+
 	return 0;	
 }
 
