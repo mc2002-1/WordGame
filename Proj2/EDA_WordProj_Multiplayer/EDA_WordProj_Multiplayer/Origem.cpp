@@ -386,23 +386,22 @@ pair<int, CharsPosition> Board::insertLetOnBoard(CharsOnBoard& charsOnHand, Char
 	{
 		for (int c = 0; c < charsOnHand.charWord.size(); c++)
 		{
-			if (w.word[0] == C && w.pos.col == cPos.col && w.pos.lin)
+			if (w.word[0] == C && w.pos.col == cPos.col && w.pos.lin == cPos.lin)
 			{
-				if (w.word.size() == 1)
-				{
-					points++; // Already accounts for the possible second point through looping
-				}
-				w.word.erase(w.word.begin());
 				switch (w.pos.dir)
 				{
 				case 'H':
 					w.pos.col++;
+					break;
 				case 'V':
 					w.pos.lin++;
+					break;
 				}
 				charsOnHand.charWord.erase(charsOnHand.charWord.begin() + idx);
 				charsOnHand.pos.erase(charsOnHand.pos.begin() + idx);
-				return make_pair(points,cPos);
+				w.word.erase(w.word.begin());
+				cPos.dir = '+';
+				return make_pair(points, cPos); // No need to keep iterating after finding. More efficient
 			}
 			else 
 			{
@@ -629,6 +628,7 @@ CharsOnBoard& Hand::getHand()
 	return handLetters;
 }
 
+
 void Hand::showHand()
 {
 	cout << "Hand: ";
@@ -657,6 +657,7 @@ void Hand::switchHand(CharsOnBoard& bag)
 	{
 		// Swapping letter with bag
 		swap(bag.charWord[bag.charWord.size() - 1], handLetters.charWord[index]);
+		swap(bag.pos[bag.pos.size() - 1], handLetters.pos[index]);
 	}
 	else
 	{
@@ -909,18 +910,20 @@ int main()
 	{
 		for (int pl = 0; pl < nPlayers; pl++)
 		{
-			cout << RED << "Turn - Player " << players[pl].getId() << ": " << players[pl].getName() << NO_COLOR << endl;
-			for (int sw = 0; sw < 2; sw++)
+			int gameSize = 2;
+			cout << RED << "Turn - Player " << players[pl].getId() << ": " << GREEN << players[pl].getName() << NO_COLOR << endl;
+			for (int sw = 0; sw < gameSize; sw++)
 			{
-				bool exitOuterLoop = false;
 				CharsOnBoard& hd = hands[pl].getHand();
 				int& pl_point = players[pl].getPoints();
+
+				bool exitOuterLoop = false;
 				char opt = readOption();
 				switch (opt)
 				{
 				case 'H':
 					showHelp();
-					sw -= 1;
+					gameSize++;
 					break;
 				case 'I':
 					hands[pl].showHand();
@@ -928,6 +931,7 @@ int main()
 					{
 						info = board.insertLetOnBoard(hd, charsOnBag);
 						point = info.first;
+						cout << "Points: " << point << endl;
 						col = info.second;
 						if (col.dir != '-')
 						{
@@ -941,15 +945,16 @@ int main()
 						}
 						else 
 						{
-							sw -= 1;
+							gameSize++;
 							cout << "This Letter does not respect the sequential order of the words! Try again." << endl;
 						}
-						board.showBoard(vclCh);
 					}
 					else
 					{
-						cout << RED << "Your HAND does not contain valid Letters. Your options are to PASS or SWAP! Try again."<< NO_COLOR <<endl;
+						gameSize++;
+						cout << RED << "Your HAND does not contain valid Letters. Your options are to PASS or SWAP!"<< NO_COLOR <<endl;
 					}
+					board.showBoard(vclCh);
 					break;
 				case 'P':
 					exitOuterLoop = true;
@@ -995,7 +1000,7 @@ int main()
 	auto maxElement = max_element(finalpoints.begin(), finalpoints.end());
 	int dis = distance(finalpoints.begin(), maxElement);
 
-	cout << RED << "Player (Id:" << players[dis].getId() << ") " << players[dis].getName() << " has won the game with " << finalpoints[dis] << " points!" << NO_COLOR << endl;
+	cout << RED << "========== Player (Id:" << players[dis].getId() << ") " << players[dis].getName() << " has won the game with " << finalpoints[dis] << " points!" << NO_COLOR << "==========" << endl;
 
 	return 0;	
 }
