@@ -96,6 +96,7 @@ typedef struct {
 	int numLins;
 	int numCols;
 	vector<WordsOnBoard> wordsOnBoard;
+	vector<CharsOnBoard> allChars;
 }BoardStruct;
 
 struct Cell {
@@ -174,7 +175,6 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 	while (!validFile)
 	{
 		// Check if file to read is valid
-
 		cout << "\nText file: ";
 		cin >> boardFile;
 		boardFile = folder + "\\" + boardFile; // Concatenating the folder to the string written by the user to form the path to the file
@@ -255,10 +255,10 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 					wordsOnBoard.pos = wordPos;
 
 					// Populating the Board structure with the words on the file
-
 					switch (wordPos.dir)
 					{
 					case 'H':
+						 
 						for (int c = 0; c < wordSize; c++)
 						{
 							boardStruct.boardCells[wordPos.lin - 'A'][wordPos.col - 'a' + c] = wordsOnBoard.word[c];
@@ -271,8 +271,9 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 						}
 						break;
 					}
-
+					
 					boardStruct.wordsOnBoard.push_back(wordsOnBoard);
+					
 				}
 
 				int begin = fileLine.find("-"); // Finds the '-' char for on the next iteration start to populate the cells and save the words on the structure
@@ -280,6 +281,7 @@ BoardStruct Board::readBoardFile(const string& folder, const vector<string>& txt
 				{
 					beginWordRead = true;
 				}
+
 			}
 		}
 	}
@@ -382,45 +384,63 @@ pair<int, CharsPosition> Board::insertLetOnBoard(CharsOnBoard& charsOnHand, Char
 	int points = 0;
 	const auto itPHand = find(charsOnHand.pos.begin(), charsOnHand.pos.end(), cPos);
 	const int idx = distance(charsOnHand.pos.begin(), itPHand);
-	for (WordsOnBoard& w : boardStruct.wordsOnBoard)
+	bool fnd = false;
+
+	for (CharsOnBoard& ch : boardStruct.allChars) // Eliminating the letter from the hand 
 	{
-		for (int c = 0; c < charsOnHand.charWord.size(); c++)
+		for (int i = 0; i < ch.charWord.size(); i++)
 		{
-			if (w.word[0] == C && w.pos.col == cPos.col && w.pos.lin == cPos.lin)
+			if (ch.charWord[0] == C && ch.pos[0].col == cPos.col && ch.pos[0].lin == cPos.lin && !fnd)
 			{
-				switch (w.pos.dir)
-				{
-				case 'H':
-					w.pos.col++;
-					break;
-				case 'V':
-					w.pos.lin++;
-					break;
-				}
+				ch.charWord.erase(ch.charWord.begin());
+				ch.pos.erase(ch.pos.begin() + i);
+				
+				cPos.dir = '+';
 				charsOnHand.charWord.erase(charsOnHand.charWord.begin() + idx);
 				charsOnHand.pos.erase(charsOnHand.pos.begin() + idx);
-				w.word.erase(w.word.begin());
-				cPos.dir = '+';
-				return make_pair(points, cPos); // No need to keep iterating after finding. More efficient
+				fnd = true;
 			}
-			else 
+			else
 			{
-				cPos.dir = '-';
+				if (!fnd)
+				{
+					cPos.dir = '-';
+				}
 			}
 		}
+	}
+
+	if(fnd) // Checking for duplicates and eliminating them
+	{ 
+		for (CharsOnBoard& ch : boardStruct.allChars)
+		{
+			for (int i = 0; i < ch.charWord.size(); i++)
+			{
+				if (ch.charWord[i] == C && ch.pos[i].col == cPos.col && ch.pos[i].lin == cPos.lin)
+				{
+					ch.charWord.erase(ch.charWord.begin() + i);
+					ch.pos.erase(ch.pos.begin() + i);
+				}
+			}
+
+			auto it = find_if(boardStruct.allChars.begin(), boardStruct.allChars.end(), [](const CharsOnBoard& ch)
+				{
+					return ch.charWord.size() == 0;
+				});
+
+			if (it != boardStruct.allChars.end())
+			{
+				points++;
+				size_t index = distance(boardStruct.allChars.begin(), it);
+				boardStruct.allChars.erase(boardStruct.allChars.begin() + index);
+			}
+
+		}
+		
 	}
 	return make_pair(points, cPos);
 }
 
-/*===============================================================================================================*/
-	/* Implementation of the condition to verify if the char is inserted ib the beginning of a word or sequentially:*/
-	// I would star by looping through all the first letters of the structure boardStruct.WordsOnBoard accessing the 
-	// positions (line and column) of the first letter in each word. I would implement a condition to verify if it matches
-	// If so, the letter is inserted. Furthermore, this position struc will be deleted so that if the insert funtion is used
-	// in a following iteration, the first position of the word would be the index right after the deleted one. This way,
-	// a sequential comparison with each letter in each word can be accomplished. From here, the points could computed also,
-	// accessing the direction of the word inserted (+).
-	/*===============================================================================================================*/
 
 // ===================================== Bag Class =====================================
 
@@ -452,6 +472,8 @@ CharsOnBoard Bag::constructBag(BoardStruct& boardStruct)
 
 	for (const WordsOnBoard& words : boardStruct.wordsOnBoard)
 	{
+		CharsOnBoard wordChars;
+		CharsPosition charsPos;
 		int wordSize = words.word.size();
 
 		charsOnBoard.charWord.reserve(wordSize); /* Reserve pre - allocates memory to the vector improving the efficiency of the code */
@@ -490,11 +512,18 @@ CharsOnBoard Bag::constructBag(BoardStruct& boardStruct)
 				}
 
 				auto it = find(charsOnBoard.pos.begin(), charsOnBoard.pos.end(), charsPosition);
-				if (it == charsOnBoard.pos.end())
+				if (it == charsOnBoard.pos.end()) // Does not add duplicates
 				{
 					charsOnBoard.charWord.push_back(words.word[c]); // Character
 					charsOnBoard.pos.push_back(charsPosition); // Position
 				}
+
+				wordChars.charWord.push_back(words.word[c]);
+				charsPos.col = charsPosition.col;
+				charsPos.lin = charsPosition.lin;
+				charsPos.dir = charsPosition.dir;
+				wordChars.pos.push_back(charsPos);
+
 			}
 			break;
 
@@ -531,14 +560,23 @@ CharsOnBoard Bag::constructBag(BoardStruct& boardStruct)
 				}
 
 				auto it = find(charsOnBoard.pos.begin(), charsOnBoard.pos.end(), charsPosition);
-				if (it == charsOnBoard.pos.end())
+				if (it == charsOnBoard.pos.end())// Does not add duplicates
 				{
 					charsOnBoard.charWord.push_back(words.word[c]); // Character
 					charsOnBoard.pos.push_back(charsPosition); // Position
 				}
+
+				wordChars.charWord.push_back(words.word[c]);
+				charsPos.col = charsPosition.col;
+				charsPos.lin = charsPosition.lin;
+				charsPos.dir = charsPosition.dir;
+				wordChars.pos.push_back(charsPos);
+
 			}
 			break;
 		}
+
+		boardStruct.allChars.push_back(wordChars);
 	}
 	charsOnBoard.nLetters = charsOnBoard.charWord.size();
 	return charsOnBoard;
@@ -619,7 +657,6 @@ CharsOnBoard& Hand::getLettersFromBag(const int numLetters, CharsOnBoard& bag, b
 	bag.charWord.erase(bag.charWord.begin(), bag.charWord.begin() + numLetters);
 	bag.pos.erase(bag.pos.begin(), bag.pos.begin() + numLetters);
 	bag.nLetters -= numLetters;
-
 	return handLetters;
 }
 
@@ -631,8 +668,8 @@ CharsOnBoard& Hand::getHand()
 
 void Hand::showHand()
 {
-	cout << "Hand: ";
-	for (int l = 0; l < handLetters.nLetters; l++)
+	cout << LIGHTRED << "Hand: " << NO_COLOR;
+	for (int l = 0; l < handLetters.charWord.size(); l++)
 	{
 		cout << handLetters.charWord[l] << ": " << handLetters.pos[l].lin << handLetters.pos[l].col << " | ";
 	}
@@ -661,21 +698,23 @@ void Hand::switchHand(CharsOnBoard& bag)
 	}
 	else
 	{
-		cout << "\nInvalid Letter!" << endl;
+		cout << "\nInvalid Letter!\n" << endl;
 	}
 }
 
 bool Hand::playableHand(BoardStruct& boardStruct) // Ensures there are playable Letters on the Hand
 {
-	for (WordsOnBoard& w : boardStruct.wordsOnBoard)
+	for (CharsOnBoard& w : boardStruct.allChars)
 	{
+
 		for (int c = 0; c < handLetters.charWord.size(); c++)
 		{
-			if (w.word[0] == handLetters.charWord[c] && w.pos.col == handLetters.pos[c].col && w.pos.lin == handLetters.pos[c].lin)
+			if (w.charWord[0] == handLetters.charWord[c] && w.pos[0].col == handLetters.pos[c].col && w.pos[0].lin == handLetters.pos[c].lin)
 			{
 				return true;
 			}
 		}
+
 
 	}
 	return false;
@@ -690,11 +729,11 @@ private:
 	string name;
 	int points;
 public:
-	Player(int id_, string name_) // Constructor
+	Player(int id_, string name_, int pt_) // Constructor
 	{	
 		setId(id_);
 		setName(name_); 
-		points = 0;
+		points = pt_;
 		cout << "Player " << id_ << " named " << name_ << " has been created!" << endl;
 	}
 
@@ -824,7 +863,7 @@ int numLettersToEachPlayer(int nPlayers, int numLetters)
 }
 
 char readOption() { // Reads user game option and returns the choosen one
-	cout << "H - Help | " << "I - Insert words | " << "P - Pass play | "  << "S - Swap | " << "Q - Quit" << endl << "\nOption: ";
+	cout << CYAN << "H - Help | " << "I - Insert words | " << "P - Pass play | "  << "S - Swap | " << "Q - Quit" << endl << NO_COLOR << "\nOption: " ;
 
 	char inserted;
 	cin >> inserted;
@@ -889,7 +928,7 @@ int main()
 		string name;
 		cout << "Player " << id << " | " << "Insert name: ";
 		cin >> name;
-		Player pl(id, name);
+		Player pl(id, name, 0);
 		players.push_back(pl);
 
 		Hand hand(handSize, charsOnBag, true);
@@ -903,10 +942,10 @@ int main()
 	cout << " ------------- Game starting --------------\n" << endl;
 	board.showBoard(vclCh);
 	pair<int, CharsPosition> info;
-	int point;
 	CharsPosition clCh;
-	
-	while (nPlayers >= 2 || boardStruct.wordsOnBoard.empty())
+	int point;
+
+	while (nPlayers >= 2 && boardStruct.allChars.size() > 0)
 	{
 		for (int pl = 0; pl < nPlayers; pl++)
 		{
@@ -931,16 +970,19 @@ int main()
 					{
 						info = board.insertLetOnBoard(hd, charsOnBag);
 						point = info.first;
-						cout << "Points: " << point << endl;
 						col = info.second;
 						if (col.dir != '-')
 						{
 							vclCh.push_back(col);
 							players[pl].addPoints(point);
+							
 							if (!bag.isEmpty(charsOnBag))
 							{
 								hands[pl].getLettersFromBag(1, charsOnBag, false);
-								hands[pl].showHand();
+							}
+							if (point > 0)
+							{
+								cout << LIGHTRED << "Scored points: " << NO_COLOR << point << endl;
 							}
 						}
 						else 
@@ -964,7 +1006,7 @@ int main()
 					{
 						hands[pl].showHand();
 						hands[pl].switchHand(charsOnBag);
-						cout << "New ";
+						cout << LIGHTRED <<"New " << NO_COLOR;
 						hands[pl].showHand();
 						bag.shuffle(charsOnBag);
 					}
@@ -975,10 +1017,10 @@ int main()
 					break;
 				case 'Q':
 					exitOuterLoop = true;
+					cout << "\nPlayer " << players[pl].getId() << ": " << players[pl].getName() << " has quit the game!" << endl;
 					players.erase(players.begin() + pl);
 					hands.erase(hands.begin() + pl);
 					nPlayers -= 1;
-					cout << "\nPlayer " << players[pl].getId() << ": " << players[pl].getName() << " has quit the game!" << endl;
 					break;
 				}
 
@@ -986,21 +1028,31 @@ int main()
 				{
 					break;
 				}
-				
+
 			}
 		}
 	}
 
 	vector<int> finalpoints;
-	for (int pl = 0; pl < nPlayers; pl++)
+	finalpoints.reserve(nPlayers);
+	for (int pll = 0; pll < nPlayers; pll++)
+	{	
+		finalpoints.push_back(players[pll].getPoints());
+		
+	}
+	
+	int dis;
+	auto maxElement = max_element(finalpoints.begin(), finalpoints.end());
+	if (maxElement != finalpoints.end())
 	{
-		finalpoints.push_back(players[pl].getPoints());
+		dis = distance(finalpoints.begin(), maxElement);
+	}
+	else
+	{
+		dis = 0;
 	}
 
-	auto maxElement = max_element(finalpoints.begin(), finalpoints.end());
-	int dis = distance(finalpoints.begin(), maxElement);
-
-	cout << RED << "========== Player (Id:" << players[dis].getId() << ") " << players[dis].getName() << " has won the game with " << finalpoints[dis] << " points!" << NO_COLOR << "==========" << endl;
+	cout << RED << "========== Player (Id:" << players[dis].getId() << ") " << players[dis].getName() << " has won the game with " << finalpoints[dis] << " points! ==========" << NO_COLOR << endl;
 
 	return 0;	
 }
