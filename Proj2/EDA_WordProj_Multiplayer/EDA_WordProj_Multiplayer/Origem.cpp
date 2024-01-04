@@ -95,8 +95,8 @@ typedef struct {
 	vector<vector<char>> boardCells;
 	int numLins;
 	int numCols;
-	vector<WordsOnBoard> wordsOnBoard;
-	vector<CharsOnBoard> allChars;
+	vector<WordsOnBoard> wordsOnBoard; // Used fr«or reconstruction the board inside the code
+	vector<CharsOnBoard> allChars; // Used to keep track of the letters left on the board
 }BoardStruct;
 
 struct Cell {
@@ -438,6 +438,7 @@ pair<int, CharsPosition> Board::insertLetOnBoard(CharsOnBoard& charsOnHand, Char
 		}
 		
 	}
+
 	return make_pair(points, cPos);
 }
 
@@ -686,6 +687,8 @@ void Hand::switchHand(CharsOnBoard& bag)
 	cout << "Letter to switch: ";
 	cin >> replaceL;
 
+	replaceL = toupper(replaceL);
+
 	CharsOnBoard aux;
 	const auto letIt = find(handLetters.charWord.begin(), handLetters.charWord.end(), replaceL);
 	const int index = distance(handLetters.charWord.begin(), letIt);
@@ -900,6 +903,7 @@ int main()
 	cout << "================ Multiplayer Board Game ================" << endl;
 	CharsPosition col;
 	vector<CharsPosition> vclCh;
+
 	// Initializing BOARD:
 	Board board;
 	BoardStruct& boardStruct = board.getBoardStruct();
@@ -1032,7 +1036,7 @@ int main()
 			}
 		}
 	}
-
+	//End of the game
 	vector<int> finalpoints;
 	finalpoints.reserve(nPlayers);
 	for (int pll = 0; pll < nPlayers; pll++)
