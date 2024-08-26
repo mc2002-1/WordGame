@@ -8,7 +8,7 @@ The objective of this project was to develop a program that creates a board to p
 
 In this project, the saved game boards are used in a variation of the crossword game where the words must be completed letter by letter in order. The game can be played by 2 to 4 players and each player receives an equal-sized bag of letters from the words present in the specific board imported. 
 
-Each player randomly receives by default 50% of the total number of letters on the board divided by the number of players in the game session. Alternatively, it can specified at the beginning of the game session the number of letters each player hand receives with a maximum of 80% of the number of letters on the board also divided by the number of players. The remaining letters stay in an invisible global "bag", from which a letter is drawn randomly to the player's hand that correctly inserted a letter.
+Each player randomly receives by default 50% of the total number of letters on the board divided by the number of players in the game session. Alternatively, it can specified at the beginning of the game session the number of letters each player hand receives with a maximum of 80% of the number of letters on the board also divided by the number of players. The remaining letters stay in an invisible global "bag", from which a letter is randomly drawn, if not yet emptied, to the player's hand that correctly inserted a letter.
 
 The words must be completed in order and the instant a player completes a word, he receives one point, whereas if two words are completed with one play, 2 points are received. Once all the words are completed, the player with the most points wins. 
 
