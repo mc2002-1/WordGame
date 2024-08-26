@@ -25,7 +25,9 @@ Finally, each player also has the option to QUIT the game and the gaming loop en
 UI:
 
 <img width="311" alt="1" src="https://github.com/user-attachments/assets/ba0e0d60-b61f-490d-8c67-ff3ce93c5c9d">
+
 <img width="330" alt="2" src="https://github.com/user-attachments/assets/ea387cb7-2abd-4a2e-8ad7-a467f8cfaf27">
+
 <img width="314" alt="3" src="https://github.com/user-attachments/assets/542819a7-9fb4-4139-8901-edc00ab4a37b">
 
 
